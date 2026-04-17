@@ -11,22 +11,58 @@ export class PatientService implements IPatientService {
         {id: 1, name: 'Nguyen Van A', age: 18, birthDate: '2004-18-8', email: 'abc@gmail.com', phone: '011111111', address: 'abc', createAt: new Date('2024-18-05'), avatar: 'abcs'}
     ];
 
-    setAp(dto: CreateAppoinmentDTO): Promise<Appointment> {
-        let name = 'ahihi'; //this will be name of the appointment
+    setAppointment(dto: CreateAppoinmentDTO): Promise<Appointment> {
         let docter = 'quan';
         let timeInput = '26-05-2026';
         const [day,month,year] = timeInput.split('-');
 
         const date = new Date(`${year}-${month}-${day}`);
-        console.log(date)
-        return Promise.resolve({} as Appointment);
+        let appointment: Appointment = 
+            {
+                id: 1,
+                apTime: new Date('2026-10-11'),
+                address: 'abc Mac Dinh',
+                doctor: 'Quan',
+                patientId: 1
+            }
+
+        return Promise.resolve(appointment);
     }
 
-    deleteAp(id: number): Promise<void> {
-        return Promise.resolve();
+    deleteAppointment(id: number): Promise<{ message: string }> {
+        return Promise.resolve({ message: `Delete ${id}` });
     }
 
-    editAp(id: number): Promise<Appointment> {
-        return Promise.resolve({} as Appointment);
+    editAppointment(appointmentId: number): Promise<Appointment> {
+        let newAppointment: Appointment = {
+            id: appointmentId,
+            apTime: new Date('2025-08-18'),
+            address: 'dia chi bac si',
+            doctor: 'bac si Quy',
+            patientId: 1
+        }
+        return Promise.resolve(newAppointment);
     }
+
+    listAppointment(patientId: number): Promise<Appointment[]> {
+        //fix this function by finding with patientId
+        let appointment: Appointment[] = [
+            {
+                id: 1,
+                apTime: new Date('2026-10-11'),
+                address: 'abc Mac Dinh',
+                doctor: 'Quan',
+                patientId: 1
+            },
+            {
+                id: 2,
+                apTime: new Date('2026-10-11'),
+                address: 'abc Mac Dinh',
+                doctor: 'Quan',
+                patientId: 1
+            }
+        ];
+        return Promise.resolve(appointment);
+    }
+
 }

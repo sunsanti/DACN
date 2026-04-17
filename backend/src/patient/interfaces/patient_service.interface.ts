@@ -4,8 +4,9 @@ import { Appointment } from "./appointment.interface";
 import { Patient } from "./patient.interface";
 
 export interface IPatientService {
-    setAp(dto: CreateAppoinmentDTO): Promise<Appointment>;
+    setAppointment(dto: CreateAppoinmentDTO): Promise<Appointment>;
     // findByFilter(filter: {date?: Date; apName: string});
-    deleteAp(id: number): Promise<void>;
-    editAp(id: number): Promise<Appointment>;
+    deleteAppointment(id: number): Promise<{message: string}>;
+    editAppointment(id: number): Promise<Appointment>;
+    listAppointment(patientId: number): Promise<Appointment[]>;
 }
