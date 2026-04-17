@@ -1,15 +1,24 @@
-import { IsEmail, IsInt, IsDate, IsNumber } from 'class-validator';
+import { IsEmail, IsInt, IsDate, IsString } from 'class-validator';
 
 export class PatientDTO {
     @IsInt()
     id: number;
 
-    @IsNumber()
+    @IsInt()
     age: number;
 
     @IsEmail()
     email: string;
 
     @IsDate()
-    date: Date
+    date: Date;
+
+    @IsString()
+    name: string;
+
+    @IsString()
+    phone: string;
+
+    @IsString()
+    address: string;
 }
