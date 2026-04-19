@@ -6,5 +6,5 @@ export interface doctor {
     gender: string
     phone: string,
     address: string,
-    email: string
+    email: string;
 }
