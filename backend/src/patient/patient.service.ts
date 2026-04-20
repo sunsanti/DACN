@@ -21,9 +21,13 @@ export class PatientService implements IPatientService {
             {
                 id: 1,
                 apTime: new Date('2026-10-11'),
+                confirmDate: null,
                 address: 'abc Mac Dinh',
+                note: null,
+                confirmCondition: 1,
                 doctor: 'Quan',
-                patientId: 1
+                patientId: 1,
+                doctorId: 1
             }
 
         return Promise.resolve(appointment);
@@ -37,9 +41,13 @@ export class PatientService implements IPatientService {
         let newAppointment: Appointment = {
             id: appointmentId,
             apTime: new Date('2025-08-18'),
+            confirmDate: null,
             address: 'dia chi bac si',
+            note: null,
+            confirmCondition: 1,
             doctor: 'bac si Quy',
-            patientId: 1
+            patientId: 1,
+            doctorId: 2
         }
         return Promise.resolve(newAppointment);
     }
@@ -50,16 +58,24 @@ export class PatientService implements IPatientService {
             {
                 id: 1,
                 apTime: new Date('2026-10-11'),
+                confirmDate: null,
                 address: 'abc Mac Dinh',
+                note: null,
+                confirmCondition: 1,
                 doctor: 'Quan',
-                patientId: 1
+                patientId: 1,
+                doctorId: 1
             },
             {
                 id: 2,
                 apTime: new Date('2026-10-11'),
+                confirmDate: new Date('2026-10-11'),
                 address: 'abc Mac Dinh',
+                note: 'Benh nhan bi abc, xyz',
+                confirmCondition: 0,
                 doctor: 'Quan',
-                patientId: 1
+                patientId: 1,
+                doctorId: 1
             }
         ];
         return Promise.resolve(appointment);
