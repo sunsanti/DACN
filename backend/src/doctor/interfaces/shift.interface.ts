@@ -1,8 +1,8 @@
-export interface shift {
+export interface Shift {
     id: number;
     doctorId: number;
     type: 'morning' | 'afternoon';
-    startTime: string;
-    endTime: string;
+    startTime: Date;
+    endTime: Date;
     emergency: number;
 }

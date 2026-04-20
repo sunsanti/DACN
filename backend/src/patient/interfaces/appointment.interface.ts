@@ -1,11 +1,11 @@
 export interface Appointment {
     id: number;
     apTime: Date;
-    confirmDate: Date;
+    confirmDate?: Date | null;
     address: string;
-    note: string
-    confirmCondition: number;
+    note?: string | null;
+    confirmCondition?: number;
     doctor: string;
     patientId: number;
-    doctorId: number
+    doctorId: number;
 }

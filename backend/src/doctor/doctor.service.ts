@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { IDoctorService } from "./interfaces/doctor_service.interface";
-import { Appointment } from "src/patient/dto/appointment.dto";
+import { Appointment } from "src/patient/interfaces/appointment.interface";
+import { Shift } from "./interfaces/shift.interface";
 
 @Injectable()
 export class DoctorService implements IDoctorService {
@@ -20,7 +21,7 @@ export class DoctorService implements IDoctorService {
     // đối với cái này sẽ làm cái struct ở ngoại để tính tổng thời lượng cho tiện, còn việc đăng kí shift cụ thể thì để làm function rồi đẩy nó lên luôn
     //nhớ lưu db riêng là weeks nữa để tính tổng số giờ làm á\
     //check if that day there is anyone cancel the shift first
-    addWorkingTime(): Promise<Date> {
+    addWorkingTime(): Promise<Shift[]> {
         const Schedule = {
             workingSchedule: Number, //total number of shifts
             workingTime: Number, //total working time (hours)
@@ -28,7 +29,7 @@ export class DoctorService implements IDoctorService {
             afternoonSchedule: Date, // this shift will have 6 hours
             emergency: Number // 0 means having, 1 means no
         }
-        return Promise.resolve({} as Date);
+        return Promise.resolve({} as Shift[]);
     }
 
     // cancelAppointment(appointment: Appointment): Promise<void> {
