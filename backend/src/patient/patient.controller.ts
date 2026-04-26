@@ -3,6 +3,7 @@ import { CreateAppoinmentDTO } from "./dto/create_appointment.dto";
 import { PatientService } from "./patient.service";
 import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { Appointment } from "./dto/appointment.dto";
+import { PatientEntity } from "./entities/patient.entity";
 
 @ApiTags('patient')
 @Controller('patient')
@@ -12,6 +13,11 @@ export class PatientController {
     @Post('create-appointment')
     setAppointment(@Body() dto: CreateAppoinmentDTO) {
         return this.patientService.setAppointment(dto);
+    }
+
+    @Post('create-patient')
+    createPatient(): Promise<PatientEntity> {
+        return this.patientService.createPatient();
     }
 
     @Get('list-appointment')
