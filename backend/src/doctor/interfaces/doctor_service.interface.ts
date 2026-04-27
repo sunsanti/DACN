@@ -1,12 +1,21 @@
-import { Appointment } from "src/patient/interfaces/appointment.interface";
-import { Shift } from "./shift.interface";
+// Sửa lại đường dẫn import trỏ về Entity thật thay vì Interface cũ
+import { Appointment } from "../../patient/entities/appointment.entity";
+import { Shift } from "../entities/shift.entity";
 
 export interface IDoctorService {
     listUnacceptedAppointment(): Promise<Appointment[]>;
+
     listAcceptedAppointment(): Promise<Appointment[]>;
-    addWorkingTime(): Promise<Shift[]>;
-    // cancelAppointment(appointment: Appointment): Promise<void>;
-    cancelShift(): Promise<void>;
+
+    // Thêm tham số shiftData
+    addWorkingTime(shiftData: Partial<Shift>): Promise<Shift[]>;
+
+    // Thêm tham số shiftId
+    cancelShift(shiftId: number): Promise<void>;
+
+    // Đã có sẵn tham số appointmentId, giữ nguyên
     reAppointment(appointmentId: number): Promise<Appointment>;
-    confirmAppointment(): Promise<Appointment>;
+
+    // Thêm tham số appointmentId
+    confirmAppointment(appointmentId: number): Promise<Appointment>;
 }

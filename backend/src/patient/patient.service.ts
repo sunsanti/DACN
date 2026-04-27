@@ -1,84 +1,66 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 import { IPatientService } from "./interfaces/patient_service.interface";
-import { PatientDTO } from "./dto/patient.dto";
-import { Patient } from "./interfaces/patient.interface";
-import { Appointment } from "./interfaces/appointment.interface";
+import { Patient } from "./entities/patient.entity"; // Dùng Entity mới tạo
+import { Appointment } from "./entities/appointment.entity"; // Dùng Entity mới tạo
 import { CreateAppoinmentDTO } from "./dto/create_appointment.dto";
 
 @Injectable()
 export class PatientService implements IPatientService {
-    private patiens: Patient[] = [
-        {id: 1, name: 'Nguyen Van A', age: 18, birthDate: '2004-18-8', email: 'abc@gmail.com', phone: '011111111', address: 'abc', createAt: new Date('2024-18-05'), avatar: 'abcs'}
-    ];
+    constructor(
+        @InjectRepository(Patient)
+        private readonly patientRepo: Repository<Patient>,
 
-    setAppointment(dto: CreateAppoinmentDTO): Promise<Appointment> {
-        let docter = 'quan';
-        let timeInput = '26-05-2026';
-        const [day,month,year] = timeInput.split('-');
+        @InjectRepository(Appointment)
+        private readonly appointmentRepo: Repository<Appointment>,
+    ) { }
 
-        const date = new Date(`${year}-${month}-${day}`);
-        let appointment: Appointment = 
-            {
-                id: 1,
-                apTime: new Date('2026-10-11'),
-                confirmDate: null,
-                address: 'abc Mac Dinh',
-                note: null,
-                confirmCondition: 1,
-                doctor: 'Quan',
-                patientId: 1,
-                doctorId: 1
-            }
+    // Logic cũ: Tạo lịch hẹn
+    async setAppointment(dto: CreateAppoinmentDTO): Promise<Appointment> {
+        // Giữ lại logic xử lý thời gian của Quý để dùng nếu cần
+        // let timeInput = '26-05-2026'; 
+        // const [day, month, year] = timeInput.split('-');
+        // const date = new Date(`${year}-${month}-${day}`);
 
-        return Promise.resolve(appointment);
+        // THAY THẾ: Lưu dữ liệu thật từ DTO vào Database
+        const newAppointment = this.appointmentRepo.create({
+            ...dto,
+            confirmCondition: 1, // Giữ logic cũ của Quý là mặc định bằng 1
+            // apTime: date, // Có thể dùng biến date đã xử lý ở trên
+        });
+
+        return await this.appointmentRepo.save(newAppointment);
     }
 
-    deleteAppointment(id: number): Promise<{ message: string }> {
-        return Promise.resolve({ message: `Delete ${id}` });
-    }
-
-    editAppointment(appointmentId: number): Promise<Appointment> {
-        let newAppointment: Appointment = {
-            id: appointmentId,
-            apTime: new Date('2025-08-18'),
-            confirmDate: null,
-            address: 'dia chi bac si',
-            note: null,
-            confirmCondition: 1,
-            doctor: 'bac si Quy',
-            patientId: 1,
-            doctorId: 2
+    // Logic cũ: Xóa lịch hẹn
+    async deleteAppointment(id: number): Promise<{ message: string }> {
+        const result = await this.appointmentRepo.delete(id);
+        if (result.affected === 0) {
+            throw new NotFoundException(`Không tìm thấy lịch hẹn ID ${id}`);
         }
-        return Promise.resolve(newAppointment);
+        return { message: `Delete ${id} thành công từ Database` };
     }
 
-    listAppointment(patientId: number): Promise<Appointment[]> {
-        //fix this function by finding with patientId
-        let appointment: Appointment[] = [
-            {
-                id: 1,
-                apTime: new Date('2026-10-11'),
-                confirmDate: null,
-                address: 'abc Mac Dinh',
-                note: null,
-                confirmCondition: 1,
-                doctor: 'Quan',
-                patientId: 1,
-                doctorId: 1
-            },
-            {
-                id: 2,
-                apTime: new Date('2026-10-11'),
-                confirmDate: new Date('2026-10-11'),
-                address: 'abc Mac Dinh',
-                note: 'Benh nhan bi abc, xyz',
-                confirmCondition: 0,
-                doctor: 'Quan',
-                patientId: 1,
-                doctorId: 1
-            }
-        ];
-        return Promise.resolve(appointment);
+    // Logic cũ: Sửa lịch hẹn
+    async editAppointment(appointmentId: number): Promise<Appointment> {
+        // Thay vì return object fix cứng, ta tìm trong DB và update
+        // Ở đây mình ví dụ cập nhật địa chỉ theo logic cũ của Quý
+        await this.appointmentRepo.update(appointmentId, {
+            address: 'dia chi bac si (đã cập nhật)',
+            doctor: 'bac si Quy'
+        });
+
+        const updated = await this.appointmentRepo.findOne({ where: { id: appointmentId } });
+        if (!updated) throw new NotFoundException('Không tìm thấy lịch hẹn');
+        return updated;
     }
 
+    // Logic cũ: Lấy danh sách (Quý có note: "fix this function by finding with patientId")
+    async listAppointment(patientId: number): Promise<Appointment[]> {
+        // ĐÃ FIX: Tìm đúng danh sách lịch hẹn của patientId này trong Database
+        return await this.appointmentRepo.find({
+            where: { patientId: patientId }
+        });
+    }
 }

@@ -8,6 +8,9 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  // Thêm 2 Controller mới cho Name và Age
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
@@ -20,7 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Đăng Ký Tài Khoản'),
+        title: Text('Đăng Ký Bệnh Nhân'),
         backgroundColor: Colors.teal,
         elevation: 0,
       ),
@@ -30,8 +33,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // 1. Ô nhập Họ và Tên
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Họ và tên',
+                  prefixIcon: Icon(Icons.person),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 15),
+
+              // 2. Ô nhập Tuổi
+              TextField(
+                controller: _ageController,
+                keyboardType: TextInputType.number, // Chỉ cho nhập số
+                decoration: InputDecoration(
+                  labelText: 'Tuổi',
+                  prefixIcon: Icon(Icons.cake),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 15),
+
+              // 3. Ô nhập Email
               TextField(
                 controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
                   labelText: 'Email',
                   prefixIcon: Icon(Icons.email),
@@ -41,6 +73,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 15),
+
+              // 4. Ô nhập Mật khẩu
               TextField(
                 controller: _passwordController,
                 obscureText: true,
@@ -53,6 +87,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 15),
+
+              // 5. Ô xác nhận mật khẩu
               TextField(
                 controller: _confirmPasswordController,
                 obscureText: true,
@@ -86,22 +122,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   onPressed: authViewModel.isLoading
                       ? null
                       : () async {
+                          // CẬP NHẬT: Truyền thêm Name và Age vào hàm register
                           bool success = await authViewModel.register(
-                            _emailController.text,
-                            _passwordController.text,
-                            _confirmPasswordController.text,
+                            email: _emailController.text,
+                            password: _passwordController.text,
+                            confirmPassword: _confirmPasswordController.text,
+                            name: _nameController.text,
+                            age: int.tryParse(_ageController.text) ?? 0,
                           );
+
                           if (success) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
                                   'Đăng ký thành công! Hãy đăng nhập.',
                                 ),
+                                backgroundColor: Colors.green,
                               ),
                             );
-                            Navigator.pop(
-                              context,
-                            ); // Quay lại màn hình đăng nhập
+                            Navigator.pop(context);
                           }
                         },
                   child: authViewModel.isLoading

@@ -1,27 +1,20 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { UserRole } from '../../users/entities/user.entity';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private authService: AuthService) { }
 
   @Post('register')
   async register(@Body() body: any) {
-    console.log("=== DỮ LIỆU FLUTTER GỬI LÊN LÚC REGISTER ===")
-    const { email, password, role } = body;
-    const userRole = role ? (role as UserRole) : UserRole.PATIENT;
-
-    const user = await this.authService.register(email, password, userRole);
-    // Xóa password trước khi trả về client
-    const { password: _, ...result } = user;
-    return result;
+    // Truyền thẳng toàn bộ body (email, password, name, age...) vào Service
+    return await this.authService.register(body);
   }
 
+  @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(@Body() body: any) {
-    console.log("=== DỮ LIỆU FLUTTER GỬI LÊN LÚC LOGIN ===");
-    const { email, password } = body;
-    return this.authService.login(email, password);
+    // Chỉ cần truyền email và password để quét ở cả 2 bảng
+    return await this.authService.login(body.email, body.password);
   }
 }

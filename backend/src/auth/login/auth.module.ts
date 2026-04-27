@@ -1,20 +1,21 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
-import { UsersModule } from '../../users/users.module';
-import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { Patient } from '../../patient/entities/patient.entity';
+import { Doctor } from '../../doctor/entities/doctor.entity';
 
 @Module({
   imports: [
-    UsersModule,
+    TypeOrmModule.forFeature([Patient, Doctor]),
     JwtModule.register({
-      global: true, // Cho phép sử dụng JwtService ở các module khác (như guard)
-      secret: 'MY_SECRET',
+      global: true,
+      secret: 'SECRET_KEY_CUA_QUY',
       signOptions: { expiresIn: '1d' },
     }),
   ],
-  providers: [AuthService],
   controllers: [AuthController],
-  exports: [AuthService],
+  providers: [AuthService],
 })
 export class AuthModule { }

@@ -41,6 +41,8 @@ class _LoginScreenState extends State<LoginScreen> {
               // Ô nhập Email
               TextField(
                 controller: _emailController,
+                keyboardType: TextInputType
+                    .emailAddress, // Giúp hiển thị bàn phím có dấu @
                 decoration: InputDecoration(
                   labelText: 'Email',
                   prefixIcon: Icon(Icons.email),
@@ -92,11 +94,34 @@ class _LoginScreenState extends State<LoginScreen> {
                             _emailController.text,
                             _passwordController.text,
                           );
+
                           if (success) {
+                            // CẬP NHẬT LOGIC PHÂN QUYỀN (ROLE) TẠI ĐÂY
+                            String role = authViewModel.userRole;
+
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Đăng nhập thành công!')),
+                              SnackBar(
+                                content: Text(
+                                  'Đăng nhập thành công với quyền: $role',
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
                             );
-                            // TODO: Chuyển sang màn hình Home
+
+                            // Phân luồng giao thông
+                            if (role == 'DOCTOR') {
+                              print(
+                                ">>> Chuyển hướng sang Màn hình BÁC SĨ <<<",
+                              );
+                              // TODO: Sau này Quý tạo file doctor_home_screen.dart thì mở comment dòng dưới ra nhé
+                              // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DoctorHomeScreen()));
+                            } else {
+                              print(
+                                ">>> Chuyển hướng sang Màn hình BỆNH NHÂN <<<",
+                              );
+                              // TODO: Sau này Quý tạo file patient_home_screen.dart thì mở comment dòng dưới ra nhé
+                              // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => PatientHomeScreen()));
+                            }
                           }
                         },
                   child: authViewModel.isLoading
@@ -107,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                 ),
               ),
-              // Thêm đoạn này ngay dưới nút Đăng nhập
+
               const SizedBox(height: 15),
               TextButton(
                 onPressed: () {
@@ -118,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   );
                 },
                 child: Text(
-                  'Chưa có tài khoản? Đăng ký ngay',
+                  'Chưa có tài khoản? Đăng ký bệnh nhân ngay',
                   style: TextStyle(color: Colors.teal),
                 ),
               ),
