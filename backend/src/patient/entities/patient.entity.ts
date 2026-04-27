@@ -37,5 +37,6 @@ export class PatientEntity {
 
     @OneToMany(() => AppointmentEntity, (appointment) => appointment.patient)
     appointments: AppointmentEntity[];
+    
 
 }

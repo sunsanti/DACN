@@ -22,12 +22,12 @@ export class PatientController {
 
     @Get('list-appointment')
     @ApiOkResponse({ type: [Appointment] })
-    listAppointment(patientId: number){
+    async listAppointment(patientId: number){
         return this.patientService.listAppointment(1);
     }
 
     @Delete('delete-appointment/:id')
-    deleteAppointment(@Param('id') id: number){
+    async deleteAppointment(@Param('id') id: number){
         return this.patientService.deleteAppointment(id);
     }
 
