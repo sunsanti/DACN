@@ -2,9 +2,29 @@ import { Injectable } from "@nestjs/common";
 import { IDoctorService } from "./interfaces/doctor_service.interface";
 import { Appointment } from "src/patient/interfaces/appointment.interface";
 import { Shift } from "./interfaces/shift.interface";
+import { DoctorEntity } from "./entities/doctor.entity";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 
 @Injectable()
 export class DoctorService implements IDoctorService {
+    constructor(
+        @InjectRepository(DoctorEntity)
+        private doctorRepo: Repository<DoctorEntity>
+    ) {}
+
+    createDoctor(): Promise<DoctorEntity> {
+        let newDoctor = {
+            name: 'Quan',
+            age: 18,
+            dateOfBirth: new Date('2000-03-02'),
+            gender: 'female',
+            phone: '0123432123',
+            address: 'dia chi phong kham',
+            email: 'test@gmail.com'
+        }
+        return this.doctorRepo.save(newDoctor)
+    }
 
     listUnacceptedAppointment(): Promise<Appointment[]> {
         let confirmCondition = '0';

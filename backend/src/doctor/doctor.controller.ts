@@ -3,11 +3,17 @@ import { ApiTags } from "@nestjs/swagger";
 import { DoctorService } from "./doctor.service";
 import { Appointment } from "src/patient/interfaces/appointment.interface";
 import { Shift } from "./interfaces/shift.interface";
+import { DoctorEntity } from "./entities/doctor.entity";
 
 @Controller('doctor')
 @ApiTags('doctor')
 export class DoctorController{
     constructor(private readonly doctorService: DoctorService) {};
+
+    @Post('/create-doctor')
+    createDoctor(): Promise<DoctorEntity>{
+        return this.doctorService.createDoctor();
+    }
 
     @Get('/list-unAcpappointment')
     listUnaccpetAppointment(): Promise<Appointment[]> {
