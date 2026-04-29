@@ -10,7 +10,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
         password: '123456',
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         database: 'dacn_db',
-        synchronize: true,
+        synchronize: false,
         logger: 'advanced-console',
         autoLoadEntities: true
     })],

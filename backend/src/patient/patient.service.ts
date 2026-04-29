@@ -33,13 +33,13 @@ export class PatientService implements IPatientService {
         let appointment: AppointmentEntity = 
             {
                 id: 1,
-                apTime: new Date('2026-10-11'),
+                apTime: new Date('2026-08-11'),
                 confirmDate: null,
                 address: 'abc Mac Dinh',
                 note: null,
-                confirmCondition: 0,
+                confirmCondition: 1,
                 doctorName: 'Quan',
-                patient: {id: 1} as PatientEntity,
+                patient: {id: 2} as PatientEntity,
                 doctor: {id: 1} as DoctorEntity
             }
         return this.appointmentRepo.save(appointment);
@@ -108,9 +108,6 @@ export class PatientService implements IPatientService {
         const user: AppointmentEntity[] = await this.appointmentRepo.find({ where: { patient: { id: 1} } });
         return user;
     }
-
-    // createPatient(dto: PatientDTO): Promise<Patient> {
-    //     return Promise.resolve({} as Patient);
-    // }
+    
 
 }
