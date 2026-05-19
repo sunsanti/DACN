@@ -1,5 +1,6 @@
-import { Column, Entity, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { DoctorEntity } from "./doctor.entity";
+import { ShiftAssignmentEntity } from "./shiftAssignment.entity";
 
 @Entity('shift')
 export class ShiftEntity {
@@ -15,9 +16,14 @@ export class ShiftEntity {
     @Column({ type: 'timestamp'})
     endTime: Date;
 
-    @Column()
-    emergency: number;
+    // @Column()
+    // emergency: number;
 
-    @ManyToMany(() => DoctorEntity, (doctor) => doctor.shifts)
-    doctors: DoctorEntity[];
+
+    // @ManyToMany(() => DoctorEntity, (doctor) => doctor.shifts)
+    // doctors: DoctorEntity[];
+
+    @OneToMany(() => ShiftAssignmentEntity, (sa) => sa.shift)
+    shiftAssignments: ShiftAssignmentEntity[];
+    
 }

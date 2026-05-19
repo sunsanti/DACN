@@ -6,8 +6,11 @@ import { DoctorEntity } from "./entities/doctor.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DeepPartial, Repository } from "typeorm";
 import { ShiftEntity } from "./entities/shift.entity";
-import { AppointmentEntity } from "src/patient/entities/appointment.entity";
+import { AppointmentEntity } from "../patient/entities/appointment.entity";
 import { ConfirmAppointmentDTO } from "./dto/confirm.dto";
+import { ShiftAssignmentEntity } from "./entities/shiftAssignment.entity";
+import { timeEnd } from "console";
+import { ShiftDTO } from "./dto/shift.dto";
 
 @Injectable()
 export class DoctorService implements IDoctorService {
@@ -19,7 +22,10 @@ export class DoctorService implements IDoctorService {
         private shiftRepo: Repository<ShiftEntity>,
 
         @InjectRepository(AppointmentEntity)
-        private appointmentRepo: Repository<AppointmentEntity>
+        private appointmentRepo: Repository<AppointmentEntity>,
+
+        @InjectRepository(ShiftAssignmentEntity)
+        private shiftAssignmentRepo: Repository<ShiftAssignmentEntity>
     ) {}
 
     createDoctor(): Promise<DoctorEntity> {
@@ -52,85 +58,126 @@ export class DoctorService implements IDoctorService {
         })
     }
 
+    async listOfShifts(doctorId: number): Promise<ShiftAssignmentEntity[]> {
+        // const doctor = await this.doctorRepo.findOne({
+        //     where: {id: doctorId},
+        //     relations: ['shifts']
+        // })
+        
+        // if(!doctor) return Promise.resolve({} as ShiftEntity[])
+
+        // return doctor.shifts;
+        const shift = await this.shiftAssignmentRepo.find({
+            where: {doctor: {
+                id: doctorId,
+            }}
+        });
+
+        if(!shift) return []
+
+        return shift;
+    }
+
     // đối với cái này sẽ làm cái struct ở ngoại để tính tổng thời lượng cho tiện, còn việc đăng kí shift cụ thể thì để làm function rồi đẩy nó lên luôn
     //nhớ lưu db riêng là weeks nữa để tính tổng số giờ làm á\
     //check if that day there is anyone cancel the shift first
-    async addWorkingTime(): Promise<DoctorEntity> {
-        // const Schedule = {
-        //     workingSchedule: Number, //total number of shifts
-        //     workingTime: Number, //total working time (hours)
-        //     daySchedule: Date, //this shift will have 5 hours
-        //     afternoonSchedule: Date, // this shift will have 6 hours
-        //     emergency: Number // 0 means having, 1 means no
-        // }
-        /*
-        đánh dấu lịch là từ 1 đến nhiu đó
-         * nếu không chia hết cho 2 thì sẽ là morning (điền các thông tin cơ bản vào)
-         * nếu chia hết thfi điền afternoon  
-         */
-        const shifts = await this.shiftRepo.save([
-            {
-                type: 'morning',
-                startTime: new Date('2025-04-28'),
-                endTime: new Date('2026-04-29'),
-                emergency: 1
-            },
-            {
-                type: 'afternoon',
-                startTime: new Date('2026-04-28'),
-                endTime: new Date('2026-04-29'),
-                emergency: 1
-            }
-        ])
-        return this.doctorRepo.save({
-            id: 1,
-            shifts: shifts
-        })
-        // nhớ là sẽ kiểm tra xem có emergency đồ k để làm
+async addWorkingTime(
+  doctorId: number,
+  shifts: ShiftDTO[]
+): Promise<ShiftAssignmentEntity[]> {
+
+  const now = new Date();
+  const results: ShiftAssignmentEntity[] = [];
+
+  for (const shift of shifts) {
+
+    // 1. tìm record canceled
+    const canceled = await this.shiftAssignmentRepo.findOne({
+      where: {
+        shift: { id: shift.shiftId },
+        status: 'CANCELED'
+      }
+    });
+
+    let endTime = shift.endTime;
+
+    // 2. nếu có canceled → lấy endTime từ canceled
+    if (canceled) {
+      endTime = canceled.endTime;
     }
 
+    // 3. luôn CREATE NEW ROW
+    const created = await this.shiftAssignmentRepo.save({
+      doctor: { id: doctorId },
+      shift: { id: shift.shiftId },
+      status: 'ACTIVE',
+      startTime: now,
+      endTime: endTime,
+      type: shift.type
+    });
+
+    results.push(created);
+  }
+
+  return results;
+}
+
+    async deleteShift(doctorId: number, shiftId: number): Promise<void> {
+        // const doctorShift = await this.doctorRepo.findOne({
+        //     where: {
+        //         id: doctorId,
+        //     },
+        //     relations: ['shifts']
+        // })
+
+        // const shift = doctorShift?.shifts.find(s => s.id === shiftId);
+        // await this.doctorRepo
+        //     .createQueryBuilder()
+        //     .relation('shifts')
+        //     .of(doctorId)
+        //     .remove(shiftId)
+        
+        // await this.shiftRepo.delete(shiftId);
+        // return Promise.resolve({} as DoctorEntity);
+        const deleteShift = await this.shiftAssignmentRepo.delete({
+            doctor: { id: doctorId },
+            shift: { id: shiftId }
+        })
+    }
 
     async cancelShift(doctorId: number, shiftId: number): Promise<void> {
-        // let emergency = 1
-
-        // const now = new Date();
-
-        // const hour = now.getHours();
-        // const minute = now.getMinutes();
-
-        // let shift: number = 1;
-        // if(shift = 1){
-        //     const hourLeft = 12 - (hour + minute/60);
-        // } else {
-        //     const hourLeft = 8.5 - (hour + minute/60);
-        // }
-
-        // const hourWorked = hour + minute/60;
-        // // give the hourWorked into the db
-        // // give the hourLeft to the one who work
-
-        // return Promise.resolve();
-
-
-        const listShifts = await this.doctorRepo.findOne({
+        const time = new Date();
+        const shift = await this.shiftAssignmentRepo.findOne({
             where: {
-                id: doctorId,
-                shifts: {
-                    id: shiftId,
-                }
+                doctor: { id: doctorId },
+                shift: { id: shiftId }
+            }
+        })
+        if(shift?.type == 'morning'){
+            const updateStatus = await this.shiftAssignmentRepo.update(
+            {
+                doctor: { id: doctorId },
+                shift: { id: shiftId }
             },
-            relations: ['shifts']
-        });
-
-        if(!listShifts) return
-        await this.shiftRepo.update(shiftId, {emergency: 0});
-        //doanj nay chua test
-        // const type = listShifts.shifts[0].type;
-        // const time = listShifts.shifts[0].startTime;
-        // const morningBegin = 
-        // if(type === 'morning' && ){
-        //     const hourLeft = 12 - 
-        // }
+            {
+                status: 'CANCELED',
+                endTime: new Date(),
+                duration: 12 - time.getHours() + time.getMinutes()/60
+            }
+        )
+        } else {
+            const updateStatus = await this.shiftAssignmentRepo.update(
+            {
+                doctor: { id: doctorId },
+                shift: { id: shiftId }
+            },
+            {
+                status: 'CANCELED',
+                endTime: new Date(),
+                duration: 20 - time.getHours() + time.getMinutes()/60
+            }
+        )
+        }
         
 
     }

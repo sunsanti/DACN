@@ -1,13 +1,15 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { DoctorService } from "./doctor.service";
-import { Appointment } from "src/patient/interfaces/appointment.interface";
 import { Shift } from "./interfaces/shift.interface";
 import { DoctorEntity } from "./entities/doctor.entity";
 import { CancelShiftDto } from "./dto/cancelShift.dto";
 import { AppointmentEntity } from "src/patient/entities/appointment.entity";
 import { ConfirmAppointmentDTO } from "./dto/confirm.dto";
 import { ReAppointmentDTO } from "./dto/RA.dto";
+import { ShiftDTO } from "./dto/shift.dto";
+import { ShiftAssignmentEntity } from "./entities/shiftAssignment.entity";
+import { ShiftListDTO } from "./dto/shiftList.dto";
 
 @Controller('doctor')
 @ApiTags('doctor')
@@ -29,9 +31,12 @@ export class DoctorController{
         return this.doctorService.listAcceptedAppointment();
     }
 
-    @Post('/addShift')
-    addWorkingTime(): Promise<DoctorEntity> {
-        return this.doctorService.addWorkingTime();
+    @Post('/addShift/:id')
+    addWorkingTime(
+     @Param('id') doctorId: number,
+     @Body() body: ShiftListDTO,
+    ) {
+        return this.doctorService.addWorkingTime(doctorId, body.shifts);
     }
 
     @Post('/cancel-shift')
@@ -51,6 +56,19 @@ export class DoctorController{
         const {note, confirmDate} = confirmDto;
         //create new appointment with these informations
         return this.doctorService.confirmAppointment(appointmentId, confirmDto.note, confirmDto.confirmDate)
+    }
+
+    @Delete('/delete-shift/:doctorId/shifts/:shiftId')
+    deleteShift(
+        @Param('doctorId') doctorId: number,
+        @Param('shiftId') shiftId: number
+    ) {
+        return this.doctorService.deleteShift(doctorId, shiftId);
+    }
+
+    @Get('/list-shift/:id')
+    listOfShift(@Param('id') doctorId: number){
+        return this.doctorService.listOfShifts(doctorId);
     }
 
 }

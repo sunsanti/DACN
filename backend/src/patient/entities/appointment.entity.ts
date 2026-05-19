@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { PatientEntity } from "./patient.entity";
-import { DoctorEntity } from "src/doctor/entities/doctor.entity";
+import { DoctorEntity } from "../../doctor/entities/doctor.entity";
 
 @Entity('appointment')
 export class AppointmentEntity {

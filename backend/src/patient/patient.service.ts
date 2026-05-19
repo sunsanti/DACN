@@ -5,7 +5,7 @@ import { Patient } from "./interfaces/patient.interface";
 import { Appointment } from "./interfaces/appointment.interface";
 import { CreateAppoinmentDTO } from "./dto/create_appointment.dto";
 import { InjectRepository } from "@nestjs/typeorm";
-import { AppointmentEntity } from "./entities/appointment.entity";
+import { AppointmentEntity } from "../patient/entities/appointment.entity";
 import { Repository } from "typeorm";
 import { PatientEntity } from "./entities/patient.entity";
 import { Doctor } from "src/doctor/interfaces/doctor.interface";
