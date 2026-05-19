@@ -1,7 +1,7 @@
 export interface Shift {
     id: number;
     doctorId: number;
-    type: 'morning' | 'afternoon';
+    type: string;
     startTime: Date;
     endTime: Date;
     emergency: number;

@@ -3,8 +3,20 @@ import { IsDate, IsNumber, IsString } from "class-validator";
 
 export class ShiftDTO {
     @ApiProperty()
+    @IsNumber()
+    id: number;
+
+    @ApiProperty()
+    @IsNumber()
+    shiftId: number
+
+    @ApiProperty()
+    @IsNumber()
+    doctorId: number
+
+    @ApiProperty()
     @IsString()
-    type: string;
+    type: string
 
     @ApiProperty()
     @IsDate()
@@ -14,7 +26,4 @@ export class ShiftDTO {
     @IsDate()
     endTime: Date;
 
-    @ApiProperty()
-    @IsNumber()
-    emergency: number;
 }
