@@ -54,7 +54,7 @@ class MyApp extends StatelessWidget {
 
 // import 'services/api_service.dart';
 
-// // --- CÁC MÀN HÌNH BỆNH NHÂN ---
+// --- CÁC MÀN HÌNH BỆNH NHÂN ---
 // import 'views/patient/main_screen.dart';
 // import 'views/patient/login_screen.dart'; 
 // import 'views/patient/patient_home_screen.dart';

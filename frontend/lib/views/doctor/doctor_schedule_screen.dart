@@ -43,13 +43,47 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
 
       List<Map<String, dynamic>> formattedSchedules = [];
 
-      // Giữ nguyên logic gốc: Dùng chính vòng lặp để định nghĩa trạng thái 'pending' / 'confirmed'
+      // 1. Danh sách chờ duyệt (Luôn là pending)
       for (var item in unacceptedData) {
         formattedSchedules.add(_mapDataToUI(item, 'pending'));
       }
 
+      // 2. 🌟 ĐÃ SỬA: Đọc đúng biến 'confirmCondition' từ Database
       for (var item in acceptedData) {
-        formattedSchedules.add(_mapDataToUI(item, 'confirmed'));
+        var rawCondition = item['confirmCondition']; 
+        
+        int condition = 1; // Giá trị mặc định là 1 (Đã xác nhận)
+        if (rawCondition != null) {
+          condition = int.tryParse(rawCondition.toString()) ?? 1;
+        }
+
+        String uiStatus = 'confirmed'; // Trạng thái mặc định trên giao diện
+
+        // Phân loại các con số trạng thái vào đúng Tab
+        switch (condition) {
+          case 0:
+            uiStatus = 'pending';     // Chờ duyệt
+            break;
+          case 1:
+            uiStatus = 'confirmed';   // Đã xác nhận
+            break;
+          case 2:
+            uiStatus = 'completed';   // Đã khám (Tab số 2)
+            break;
+          case -1:
+            uiStatus = 'rejected';    // Từ chối / Hủy
+            break;
+          case 3:
+            uiStatus = 'missed';      // Vắng mặt
+            break;
+          case 4:
+            uiStatus = 'follow-up';   // Hẹn tái khám (Có thể tự động xếp vào list Đã xác nhận)
+            break;
+          default:
+            uiStatus = 'confirmed';
+        }
+
+        formattedSchedules.add(_mapDataToUI(item, uiStatus));
       }
 
       setState(() {
@@ -64,7 +98,7 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
     }
   }
 
-  // Giữ nguyên 100% hàm dịch dữ liệu gốc của bạn
+  // Cập nhật Map ID kèm theo link hồ sơ PDF
   Map<String, dynamic> _mapDataToUI(dynamic item, String status) {
     String patientName = item['patientName'] ?? 'Bệnh nhân chưa rõ';
     
@@ -79,20 +113,23 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
       try {
         DateTime parsedDate = DateTime.parse(item['apTime']);
         formattedTime = "${parsedDate.hour.toString().padLeft(2, '0')}:${parsedDate.minute.toString().padLeft(2, '0')}";
-        formattedDate = "${parsedDate.day}/${parsedDate.month}/${parsedDate.year}";
+        formattedDate = "${parsedDate.day.toString().padLeft(2, '0')}/${parsedDate.month.toString().padLeft(2, '0')}/${parsedDate.year}";
       } catch (e) {
         formattedTime = 'Lỗi giờ';
       }
     }
 
     return {
-      'id': 'BN-${item['patientId'] ?? item['id'] ?? '??'}',
+      'id': 'BN-${item['id'] ?? '??'}', 
       'name': patientName,
       'type': item['note'] ?? 'Khám bệnh',
       'time': formattedTime,
       'date': formattedDate,
-      'status': status,
+      'status': status, // Nhận trạng thái động truyền từ vòng switch vào
       'note': item['note'] ?? '',
+      
+      // 🌟 ĐÃ SỬA CHỖ NÀY: Trích xuất link PDF từ API NestJS truyền sang cho Card nhận diện
+      'aiDiagnosticPdf': item['aiDiagnosticPdf']?.toString() ?? item['pdfUrl']?.toString(),
     };
   }
 
@@ -174,14 +211,29 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                                       primaryDark: primaryDark,
                                       accentBlue: accentBlue,
                                       lightBG: lightBG,
-                                      onReject: () {
-                                        setState(() {
-                                          item['status'] = 'rejected';
-                                        });
-                                        _showToast("Đã từ chối lịch hẹn của ${item['name']}");
+                                      onReject: () async {
+                                        String rawId = item['id'].toString().replaceAll('BN-', '');
+                                        int appointmentId = int.tryParse(rawId) ?? 0;
+
+                                        if (appointmentId == 0) {
+                                          _showToast("Lỗi dữ liệu: ID không hợp lệ");
+                                          return;
+                                        }
+
+                                        _showToast("Đang xử lý...");
+
+                                        bool isSuccess = await ApiService.rejectAppointment(appointmentId);
+
+                                        if (isSuccess) {
+                                          setState(() {
+                                            item['status'] = 'rejected';
+                                          });
+                                          _showToast("Đã từ chối lịch hẹn của ${item['name']}");
+                                        } else {
+                                          _showToast("Không thể hủy lịch hẹn lúc này. Hãy thử lại!");
+                                        }
                                       },
                                       onConfirmSuccess: (updatedNote) {
-                                        // Đồng bộ hóa trạng thái lên Widget cha để kích hoạt Re-render
                                         setState(() {
                                           item['note'] = updatedNote;
                                           item['status'] = 'confirmed';
@@ -195,11 +247,47 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                                       primaryDark: primaryDark,
                                       accentBlue: accentBlue,
                                       lightBG: lightBG,
-                                      onCompleted: () {
-                                        setState(() {
-                                          item['status'] = 'completed'; 
-                                        });
-                                        _showToast("Bệnh nhân ${item['name']} đã khám xong!");
+                                      onCompleted: () async {
+                                        String rawId = item['id'].toString().replaceAll('BN-', '');
+                                        int appointmentId = int.tryParse(rawId) ?? 0;
+
+                                        if (appointmentId == 0) {
+                                          _showToast("Lỗi dữ liệu: ID không hợp lệ");
+                                          return;
+                                        }
+
+                                        _showToast("Đang xử lý hoàn tất...");
+                                        bool isSuccess = await ApiService.completeAppointment(appointmentId);
+
+                                        if (isSuccess) {
+                                          setState(() {
+                                            item['status'] = 'completed'; 
+                                          });
+                                          _showToast("Bệnh nhân ${item['name']} đã khám xong!");
+                                        } else {
+                                          _showToast("Không thể cập nhật trạng thái. Thử lại sau!");
+                                        }
+                                      },
+                                      onMissed: () async {
+                                        String rawId = item['id'].toString().replaceAll('BN-', '');
+                                        int appointmentId = int.tryParse(rawId) ?? 0;
+
+                                        if (appointmentId == 0) {
+                                          _showToast("Lỗi dữ liệu: ID không hợp lệ");
+                                          return;
+                                        }
+
+                                        _showToast("Đang ghi nhận vắng mặt...");
+                                        bool isSuccess = await ApiService.missedAppointment(appointmentId);
+
+                                        if (isSuccess) {
+                                          setState(() {
+                                            item['status'] = 'missed'; 
+                                          });
+                                          _showToast("Đã ghi nhận bệnh nhân ${item['name']} vắng mặt.");
+                                        } else {
+                                          _showToast("Không thể cập nhật trạng thái. Thử lại sau!");
+                                        }
                                       },
                                     );
                                   } else {
@@ -207,21 +295,34 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                                       schedule: item,
                                       primaryDark: primaryDark,
                                       accentBlue: accentBlue,
-                                      onFollowUpScheduled: (pickedDate) {
-                                        String formattedDate = "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
-                                        setState(() {
-                                          _schedules.add({
-                                            'id': 'BN-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}', 
-                                            'name': item['name'],
-                                            'type': 'Tái khám (${item['type']})',
-                                            'time': '09:00', 
-                                            'date': formattedDate,
-                                            'status': 'confirmed', 
-                                            'note': 'Lịch hẹn tái khám từ ca khám ngày ${item['date']}.',
+                                      onFollowUpScheduled: (String date, String time, String note) async {
+                                        String rawId = item['id'].toString().replaceAll('BN-', '');
+                                        int appointmentId = int.tryParse(rawId) ?? 0;
+
+                                        if (appointmentId == 0) {
+                                          _showToast("Lỗi dữ liệu: ID không hợp lệ");
+                                          return;
+                                        }
+
+                                        _showToast("Đang tạo lịch tái khám...");
+
+                                        bool isSuccess = await ApiService.scheduleFollowUp(
+                                          appointmentId: appointmentId,
+                                          date: date,
+                                          time: time,
+                                          note: note,
+                                        );
+
+                                        if (isSuccess) {
+                                          setState(() {
+                                            item['status'] = 'follow-up'; 
+                                            _selectedTab = 0; 
                                           });
-                                          _selectedTab = 0; // Chuyển thẳng về Tab Đã xác nhận
-                                        });
-                                        _showToast("Đã tạo lịch hẹn tái khám ngày $formattedDate cho ${item['name']}!");
+                                          _showToast("Đã hẹn lịch tái khám thành công cho ${item['name']}!");
+                                          _fetchRealSchedules(); 
+                                        } else {
+                                          _showToast("Lỗi kết nối hệ thống. Vui lòng thử lại!");
+                                        }
                                       },
                                     );
                                   }
@@ -236,7 +337,6 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
     );
   }
 
-  // Giữ nguyên UI của DateSelector từ file gốc
   Widget _buildDateSelector() {
     return Container(
       height: 100,
@@ -292,7 +392,6 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
     );
   }
 
-  // Giữ nguyên UI của SmartFilterTabs từ file gốc
   Widget _buildSmartFilterTabs(int pendingCount) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
@@ -361,5 +460,5 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
         ),
       ),
     );
-  }
+  }  
 }

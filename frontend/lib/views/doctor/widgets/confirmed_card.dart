@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart'; // Đảm bảo bạn đã thêm gói này vào pubspec.yaml
 
 class ConfirmedCard extends StatelessWidget {
   final Map<String, dynamic> schedule;
@@ -6,6 +7,7 @@ class ConfirmedCard extends StatelessWidget {
   final Color accentBlue;
   final Color lightBG;
   final VoidCallback onCompleted;
+  final VoidCallback onMissed; 
 
   const ConfirmedCard({
     super.key,
@@ -14,10 +16,37 @@ class ConfirmedCard extends StatelessWidget {
     required this.accentBlue,
     required this.lightBG,
     required this.onCompleted,
+    required this.onMissed, 
   });
+
+  // Hàm hỗ trợ mở link PDF bệnh án
+  Future<void> _openPdfUrl(BuildContext context, String? urlString) async {
+    if (urlString == null || urlString.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Không có tệp PDF đính kèm cho lịch hẹn này")),
+      );
+      return;
+    }
+
+    final Uri url = Uri.parse(urlString);
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Không thể mở liên kết';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi khi mở PDF: $e")),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Lấy link PDF được đồng bộ từ màn hình chính xuống
+    final String? pdfUrl = schedule['aiDiagnosticPdf']?.toString();
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -52,12 +81,12 @@ class ConfirmedCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      schedule['name'],
+                      schedule['name'] ?? 'Bệnh nhân chưa rõ',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: primaryDark),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      schedule['type'],
+                      schedule['type'] ?? 'Khám bệnh',
                       style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                     ),
                     const SizedBox(height: 4),
@@ -66,7 +95,7 @@ class ConfirmedCard extends StatelessWidget {
                         Icon(Icons.calendar_month, size: 14, color: accentBlue),
                         const SizedBox(width: 4),
                         Text(
-                          "${schedule['time']} - ${schedule['date']}",
+                          "${schedule['time'] ?? '--:--'} - ${schedule['date'] ?? '--/--/----'}",
                           style: TextStyle(color: accentBlue, fontSize: 13, fontWeight: FontWeight.w600),
                         ),
                       ],
@@ -84,7 +113,8 @@ class ConfirmedCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          
+          // Ghi chú của cuộc hẹn (nếu có)
           if ((schedule['note']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(
@@ -110,19 +140,85 @@ class ConfirmedCard extends StatelessWidget {
               ),
             ),
           ],
-          const Divider(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: onCompleted,
-              icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-              label: const Text("Đã khám xong", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryDark,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+
+          // 🌟 THÊM MỚI: Khối hiển thị nút xem Hồ sơ bệnh án AI mẫu PDF
+          if (pdfUrl != null && pdfUrl.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () => _openPdfUrl(context, pdfUrl),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: accentBlue.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: accentBlue.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf, size: 18, color: accentBlue),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Xem kết quả chẩn đoán hình ảnh (AI).pdf",
+                        style: TextStyle(
+                          color: accentBlue, 
+                          fontWeight: FontWeight.w600, 
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.open_in_new, size: 14, color: accentBlue),
+                  ],
+                ),
               ),
             ),
+          ],
+
+          const Divider(height: 24),
+          
+          // Thanh hành động phản hồi trạng thái buổi khám
+          Row(
+            children: [
+              // Nút 1: Bệnh nhân vắng mặt (Trạng thái 3)
+              Expanded(
+                flex: 1,
+                child: OutlinedButton.icon(
+                  onPressed: onMissed,
+                  icon: const Icon(Icons.person_off_outlined, color: Colors.orange, size: 16),
+                  label: const Text(
+                    "Không đến",
+                    style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.orange),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              // Nút 2: Khám hoàn tất (Trạng thái 2)
+              Expanded(
+                flex: 1,
+                child: ElevatedButton.icon(
+                  onPressed: onCompleted,
+                  icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 16),
+                  label: const Text(
+                    "Đã khám xong",
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryDark,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

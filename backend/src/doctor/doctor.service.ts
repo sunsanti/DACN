@@ -1,15 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { IDoctorService } from "./interfaces/doctor_service.interface";
-import { Appointment } from "src/patient/interfaces/appointment.interface";
-import { Shift } from "./interfaces/shift.interface";
-import { DoctorEntity } from "./entities/doctor.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DeepPartial, Repository } from "typeorm";
+import { Repository, In } from "typeorm";
+import { DoctorEntity } from "./entities/doctor.entity";
 import { ShiftEntity } from "./entities/shift.entity";
 import { AppointmentEntity } from "../patient/entities/appointment.entity";
-import { ConfirmAppointmentDTO } from "./dto/confirm.dto";
 import { ShiftAssignmentEntity } from "./entities/shiftAssignment.entity";
-import { timeEnd } from "console";
 import { ShiftDTO } from "./dto/shift.dto";
 
 @Injectable()
@@ -41,22 +37,21 @@ export class DoctorService implements IDoctorService {
         return this.doctorRepo.save(newDoctor)
     }
 
-    // 🌟 ĐÃ SỬA: confirmCondition = 0 (Lịch hẹn MỚI/CHỜ DUYỆT)
+    // 🌟 ĐÃ CẬP NHẬT: Đảm bảo TypeORM bốc toàn bộ các cột (bao gồm cả cột chứa link PDF)
     async listUnacceptedAppointment(doctorId: number): Promise<AppointmentEntity[]> {
         return await this.appointmentRepo.find({
             where: {
-                confirmCondition: 0, // 0 là chờ duyệt
+                confirmCondition: 0,
                 doctor: { id: doctorId }
             },
             relations: ['patient'] 
         });
     }
 
-    // 🌟 ĐÃ SỬA: confirmCondition = 1 (Lịch hẹn ĐÃ ĐƯỢC DUYỆT)
     async listAcceptedAppointment(doctorId: number): Promise<AppointmentEntity[]> {
         return await this.appointmentRepo.find({
             where: {
-                confirmCondition: 1, // 1 là đã duyệt
+                confirmCondition: In([1, 2, 4]), 
                 doctor: { id: doctorId } 
             },
             relations: ['patient'] 
@@ -69,17 +64,11 @@ export class DoctorService implements IDoctorService {
                 id: doctorId,
             }}
         });
-
         if(!shift) return []
-
         return shift;
     }
 
-    async addWorkingTime(
-      doctorId: number,
-      shifts: ShiftDTO[]
-    ): Promise<ShiftAssignmentEntity[]> {
-
+    async addWorkingTime(doctorId: number, shifts: ShiftDTO[]): Promise<ShiftAssignmentEntity[]> {
       const now = new Date();
       const results: ShiftAssignmentEntity[] = [];
 
@@ -92,7 +81,6 @@ export class DoctorService implements IDoctorService {
         });
 
         let endTime = shift.endTime;
-
         if (canceled) {
           endTime = canceled.endTime;
         }
@@ -105,15 +93,13 @@ export class DoctorService implements IDoctorService {
           endTime: endTime,
           type: shift.type
         });
-
         results.push(created);
       }
-
       return results;
     }
 
     async deleteShift(doctorId: number, shiftId: number): Promise<void> {
-        const deleteShift = await this.shiftAssignmentRepo.delete({
+        await this.shiftAssignmentRepo.delete({
             doctor: { id: doctorId },
             shift: { id: shiftId }
         })
@@ -128,7 +114,7 @@ export class DoctorService implements IDoctorService {
             }
         })
         if(shift?.type == 'morning'){
-            const updateStatus = await this.shiftAssignmentRepo.update(
+            await this.shiftAssignmentRepo.update(
             {
                 doctor: { id: doctorId },
                 shift: { id: shiftId }
@@ -137,10 +123,9 @@ export class DoctorService implements IDoctorService {
                 status: 'CANCELED',
                 endTime: new Date(),
                 duration: 12 - time.getHours() + time.getMinutes()/60
-            }
-        )
+            })
         } else {
-            const updateStatus = await this.shiftAssignmentRepo.update(
+            await this.shiftAssignmentRepo.update(
             {
                 doctor: { id: doctorId },
                 shift: { id: shiftId }
@@ -149,13 +134,12 @@ export class DoctorService implements IDoctorService {
                 status: 'CANCELED',
                 endTime: new Date(),
                 duration: 20 - time.getHours() + time.getMinutes()/60
-            }
-        )
+            })
         }
     }
 
     async reAppointment(reAppointmentId: number, newApTime: Date, newConfirmTime: Date, newNote: string): Promise<AppointmentEntity> {
-        const newAppointment = await this.appointmentRepo.update(
+        await this.appointmentRepo.update(
             {id: reAppointmentId},
             { apTime: newApTime, confirmDate: newConfirmTime, note: newNote }
         )
@@ -166,18 +150,52 @@ export class DoctorService implements IDoctorService {
         return reAppointment;
     }
 
-    // 🌟 ĐÃ SỬA: Khi bác sĩ nhấn nút duyệt, cập nhật trạng thái thành 1
     async confirmAppointment(appointmentId: number, note: string, confirmDate: Date): Promise<AppointmentEntity> {
-        const updateAppointment = await this.appointmentRepo.update(
+        await this.appointmentRepo.update(
             {id: appointmentId},
-            { note: note, confirmCondition: 1, confirmDate: confirmDate} // Chuyển từ 0 thành 1
+            { note: note, confirmCondition: 1, confirmDate: confirmDate} 
         )
         const confirmedAppointment = await this.appointmentRepo.findOne({
             where: { id: appointmentId }
         })
-
         if(!confirmedAppointment) return Promise.resolve({} as AppointmentEntity);
         return confirmedAppointment;
+    }
+
+    async rejectAppointment(appointmentId: number): Promise<AppointmentEntity> {
+        await this.appointmentRepo.update(
+            { id: appointmentId },
+            { confirmCondition: -1 } 
+        );
+        const rejectedAppointment = await this.appointmentRepo.findOne({
+            where: { id: appointmentId }
+        });
+        if(!rejectedAppointment) return Promise.resolve({} as AppointmentEntity);
+        return rejectedAppointment;
+    }
+
+    async completeAppointment(appointmentId: number): Promise<AppointmentEntity> {
+        await this.appointmentRepo.update(
+            { id: appointmentId },
+            { confirmCondition: 2 } 
+        );
+        const completedAppointment = await this.appointmentRepo.findOne({
+            where: { id: appointmentId }
+        });
+        if(!completedAppointment) return Promise.resolve({} as AppointmentEntity);
+        return completedAppointment;
+    }
+
+    async missedAppointment(appointmentId: number): Promise<AppointmentEntity> {
+        await this.appointmentRepo.update(
+            { id: appointmentId },
+            { confirmCondition: 3 } 
+        );
+        const missedAppt = await this.appointmentRepo.findOne({
+            where: { id: appointmentId }
+        });
+        if(!missedAppt) return Promise.resolve({} as AppointmentEntity);
+        return missedAppt;
     }
 
     calculateTime(): Promise<void> {
@@ -186,5 +204,17 @@ export class DoctorService implements IDoctorService {
 
     async getAllDoctors(): Promise<DoctorEntity[]> {
         return await this.doctorRepo.find(); 
+    }
+
+    async scheduleFollowUp(id: number, date: string, time: string, note: string): Promise<AppointmentEntity> {
+        const appointment = await this.appointmentRepo.findOne({ where: { id } });
+        if (!appointment) {
+            throw new NotFoundException('Không tìm thấy lịch hẹn để hẹn tái khám!');
+        }
+        const combinedDateTime = new Date(`${date}T${time}:00`);
+        appointment.confirmCondition = 4; 
+        appointment.apTime = combinedDateTime; 
+        appointment.note = note; 
+        return await this.appointmentRepo.save(appointment);
     }
 }

@@ -3,7 +3,7 @@ import 'dart:convert';
 import '../models/patient_model.dart'; 
 import '../models/appointment_model.dart'; 
 import '../models/doctor_model.dart';
-
+import 'dart:convert'; // Đảm bảo đầu file có dòng import này để dùng jsonEncode
 class ApiService {
   static const String baseUrl = 'http://192.168.56.1:3000';
   static const bool isOfflineMode = false; 
@@ -300,6 +300,76 @@ class ApiService {
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       print("❌ Lỗi gọi API confirmAppointment: $e");
+      return false;
+    }
+  }
+  // Thêm hàm này vào trong class ApiService
+  static Future<bool> rejectAppointment(int appointmentId) async {
+    try {
+      // Nhớ đổi baseUrl cho đúng với config của bạn
+      final response = await http.post(
+        Uri.parse('$baseUrl/doctor/reject-appointment/$appointmentId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true; // Thành công
+      } else {
+        print('Lỗi từ server: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('Lỗi gọi API rejectAppointment: $e');
+      return false;
+    }
+  }
+  // Hàm gọi API Đã khám xong (Trạng thái 2)
+  static Future<bool> completeAppointment(int appointmentId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/doctor/complete-appointment/$appointmentId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('Lỗi completeAppointment: $e');
+      return false;
+    }
+  }
+
+  // Hàm gọi API Bệnh nhân vắng mặt (Trạng thái 3)
+  static Future<bool> missedAppointment(int appointmentId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/doctor/missed-appointment/$appointmentId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('Lỗi missedAppointment: $e');
+      return false;
+    }
+  }
+  // Hàm gọi API Hẹn tái khám (Trạng thái 4)
+  static Future<bool> scheduleFollowUp({
+    required int appointmentId,
+    required String date,
+    required String time,
+    required String note,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/doctor/follow-up-appointment/$appointmentId'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'date': date,
+          'time': time,
+          'note': note,
+        }),
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('Lỗi scheduleFollowUp: $e');
       return false;
     }
   }

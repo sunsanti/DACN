@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../services/api_service.dart'; // Kiểm tra lại đường dẫn này
+import 'package:url_launcher/url_launcher.dart'; 
+import '../../../services/api_service.dart'; 
 
 class PendingCard extends StatefulWidget {
   final Map<String, dynamic> schedule;
@@ -36,6 +37,78 @@ class _PendingCardState extends State<PendingCard> {
   void dispose() {
     _noteController.dispose();
     super.dispose();
+  }
+
+  // 🚀 LOGIC ĐÃ ĐỒNG BỘ CHUẨN VỚI BÊN BỆNH NHÂN
+  Future<void> _openPdfFile() async {
+    debugPrint("🔍 [DOCTOR DATA DEBUG]: ${widget.schedule.toString()}");
+    
+    // Ưu tiên kiểm tra key chuẩn 'aiDiagnosticPdf' trước, sau đó là 'pdfUrl'
+    String? pdfPath = widget.schedule['aiDiagnosticPdf']?.toString() ?? widget.schedule['pdfUrl']?.toString();
+
+    // 1. Kiểm tra nếu ca khám này chưa có file PDF
+    if (pdfPath == null || pdfPath.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Ca khám này hiện chưa có file PDF hoặc link bệnh án!'), 
+            backgroundColor: Colors.orange
+          ),
+        );
+      }
+      return;
+    }
+
+    String path = pdfPath.trim();
+    String fullUrl = "";
+    
+    // 2. Tự động kiểm tra cấu trúc đường dẫn link
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      // Nếu là link tuyệt đối hoàn chỉnh -> Giữ nguyên
+      fullUrl = path;
+    } else {
+      // Nếu là đường dẫn tương đối nội bộ -> Chuẩn hóa dấu gạch chéo và nối với IP Backend
+      String baseUrl = "http://192.168.56.1:3000"; 
+      if (!path.startsWith('/')) {
+        path = '/$path';
+      }
+      fullUrl = "$baseUrl$path";
+    }
+
+    // Thông báo trạng thái xử lý cho Bác sĩ
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Đang tải hồ sơ bệnh án của: ${widget.schedule['name']}"),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+
+    final Uri url = Uri.parse(fullUrl);
+
+    try {
+      // Kích hoạt LaunchMode.externalApplication đẩy trực tiếp ra trình duyệt/hệ thống Android tự xử lý
+      bool canLaunch = await launchUrl(url, mode: LaunchMode.externalApplication);
+      
+      if (!canLaunch && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Không thể mở PDF. Vui lòng cài đặt Trình duyệt hoặc ứng dụng đọc PDF!"),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Lỗi hệ thống không thể mở tệp: $e"),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -75,7 +148,7 @@ class _PendingCardState extends State<PendingCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.schedule['name'],
+                      widget.schedule['name'] ?? 'Bệnh nhân',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -84,7 +157,7 @@ class _PendingCardState extends State<PendingCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      widget.schedule['type'],
+                      widget.schedule['type'] ?? 'Khám bệnh',
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 13,
@@ -102,7 +175,7 @@ class _PendingCardState extends State<PendingCard> {
                 child: Column(
                   children: [
                     Text(
-                      widget.schedule['time'],
+                      widget.schedule['time'] ?? '--:--',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
@@ -110,7 +183,7 @@ class _PendingCardState extends State<PendingCard> {
                       ),
                     ),
                     Text(
-                      widget.schedule['date'],
+                      widget.schedule['date'] ?? '--/--/----',
                       style: TextStyle(
                         fontSize: 10,
                         color: Colors.grey.shade500,
@@ -122,7 +195,10 @@ class _PendingCardState extends State<PendingCard> {
             ],
           ),
           const Divider(height: 24),
+          
+          // Nút bấm mở PDF thông minh 
           _buildPdfButton(),
+          
           const SizedBox(height: 12),
           TextField(
             controller: _noteController,
@@ -181,7 +257,6 @@ class _PendingCardState extends State<PendingCard> {
                     );
 
                     if (success) {
-                      // Gọi callback kích hoạt setState ở màn hình cha
                       widget.onConfirmSuccess(_noteController.text);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -210,9 +285,11 @@ class _PendingCardState extends State<PendingCard> {
     );
   }
 
+  // Widget thiết kế nút PDF đồng bộ màu đỏ sang trọng của file cũ
   Widget _buildPdfButton() {
     return InkWell(
-      onTap: () {},
+      onTap: _openPdfFile, 
+      borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
@@ -226,7 +303,7 @@ class _PendingCardState extends State<PendingCard> {
             const Icon(Icons.picture_as_pdf, color: Colors.red, size: 16),
             const SizedBox(width: 6),
             Text(
-              "Xem hồ sơ (PDF)",
+              "Xem hồ sơ chẩn đoán (PDF)",
               style: TextStyle(color: Colors.red.shade800, fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ],

@@ -24,4 +24,5 @@ export interface IDoctorService {
     reAppointment(appointmentId: number, newApTime: Date, newConfirmDate: Date, newNote: string): Promise<AppointmentEntity>;
     confirmAppointment(appointmentId: number, note: string, confirmDate: Date): Promise<AppointmentEntity>;
     calculateTime(): Promise<void>;
+    
 }
