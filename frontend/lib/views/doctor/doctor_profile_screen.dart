@@ -8,8 +8,43 @@ class DoctorProfileScreen extends StatefulWidget {
 }
 
 class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
-  // Trạng thái bật/tắt nhận lịch hẹn trực tuyến của bác sĩ
+  // Trạng thái bật/tắt nhận lịch hẹn
   bool _isAvailable = true;
+  
+  // Trạng thái load dữ liệu
+  bool _isLoading = true;
+
+  // --- CÁC BIẾN LƯU THÔNG TIN BÁC SĨ (Khớp với Database) ---
+  String _name = "";
+  String _specialty = "";
+  String _avatar = "";
+  String _email = "";
+  int _experience = 0;
+  String _description = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDoctorProfile(); // Gọi hàm tải dữ liệu khi mở màn hình
+  }
+
+  // Hàm mô phỏng tải dữ liệu từ API (Sẽ thay bằng API thật sau)
+  Future<void> _loadDoctorProfile() async {
+    // Giả lập thời gian chờ mạng 1 giây
+    await Future.delayed(const Duration(seconds: 1)); 
+    
+    setState(() {
+      // Đưa dữ liệu giả lập của Bác sĩ 1 vào để test UI
+      _name = "BS. Chuyên khoa II - Nguyễn Văn A";
+      _specialty = "Nội tổng hợp";
+      _avatar = "https://ui-avatars.com/api/?name=Nguyen+Van+A&background=03103F&color=fff&size=256";
+      _email = "bs.a@phongkham.com";
+      _experience = 20;
+      _description = "Bác sĩ Nguyễn Văn A có hơn 20 năm kinh nghiệm trong việc khám, chẩn đoán và điều trị các bệnh lý nội khoa. Từng công tác tại các bệnh viện tuyến trung ương.";
+      
+      _isLoading = false; // Tắt trạng thái loading
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,176 +59,192 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         elevation: 0,
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // --- HEADER: AVATAR & TÊN BÁC SĨ ---
-            Center(
+      // Hiển thị vòng xoay nếu đang load, load xong thì hiện giao diện
+      body: _isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  Stack(
-                    children: [
-                      const CircleAvatar(
-                        radius: 50,
-                        backgroundImage: NetworkImage(
-                          'https://i.pravatar.cc/150?img=11',
+                  // --- HEADER: AVATAR & TÊN BÁC SĨ ---
+                  Center(
+                    child: Column(
+                      children: [
+                        Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundImage: NetworkImage(_avatar), // Dùng link avatar từ DB
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: Colors.teal, // Đổi màu cho hợp theme
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Colors.blue,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
-                            size: 16,
-                          ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _name,
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    "BS. Trần Văn A",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  const Text(
-                    "Chuyên khoa: Tim mạch",
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // --- TRẠNG THÁI LÀM VIỆC (QUICK TOGGLE) ---
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.circle,
-                        color: _isAvailable ? Colors.green : Colors.grey,
-                        size: 12,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        _isAvailable ? "Đang nhận lịch hẹn" : "Đang tạm nghỉ",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                        const SizedBox(height: 4),
+                        Text(
+                          "Chuyên khoa: $_specialty",
+                          style: const TextStyle(color: Colors.grey, fontSize: 14),
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // --- TRẠNG THÁI LÀM VIỆC (QUICK TOGGLE) ---
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.circle,
+                              color: _isAvailable ? Colors.green : Colors.grey,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              _isAvailable ? "Đang nhận lịch hẹn" : "Đang tạm nghỉ",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Switch(
+                          value: _isAvailable,
+                          activeColor: Colors.teal,
+                          onChanged: (value) {
+                            setState(() {
+                              _isAvailable = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // --- 🌟 THÊM MỚI: PHẦN GIỚI THIỆU ---
+                  if (_description.isNotEmpty) ...[
+                    _buildSectionTitle("Giới thiệu bản thân"),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                    ],
+                      child: Text(
+                        _description,
+                        style: const TextStyle(fontSize: 14, height: 1.5, color: Colors.black87),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // --- KHỐI THÔNG TIN HÀNH NGHỀ ---
+                  _buildSectionTitle("Thông tin chi tiết"),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildProfileRow(
+                          Icons.email_outlined,
+                          "Email",
+                          _email,
+                        ),
+                        _buildProfileRow(
+                          Icons.workspace_premium_outlined,
+                          "Kinh nghiệm",
+                          "$_experience năm",
+                        ),
+                        _buildProfileRow(
+                          Icons.local_hospital_outlined,
+                          "Nơi làm việc",
+                          "Phòng Khám Đa Khoa",
+                        ),
+                      ],
+                    ),
                   ),
-                  Switch(
-                    value: _isAvailable,
-                    activeColor: Colors.blue,
-                    onChanged: (value) {
-                      setState(() {
-                        _isAvailable = value;
-                      });
-                    },
+                  const SizedBox(height: 16),
+
+                  // --- KHỐI CÀI ĐẶT LỊCH LÀM VIỆC ---
+                  _buildSectionTitle("Cấu hình & Tài khoản"),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildClickableRow(
+                          Icons.access_time,
+                          "Cài đặt khung giờ khám",
+                        ),
+                        _buildClickableRow(
+                          Icons.lock_outline,
+                          "Đổi mật khẩu tài khoản",
+                        ),
+                        _buildClickableRow(Icons.help_outline, "Hỗ trợ kỹ thuật"),
+                      ],
+                    ),
                   ),
+                  const SizedBox(height: 32),
+
+                  // --- NÚT ĐĂNG XUẤT ---
+                  TextButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.logout, color: Colors.red),
+                    label: const Text(
+                      "Đăng xuất tài khoản",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-
-            // --- KHỐI THÔNG TIN HÀNH NGHỀ ---
-            _buildSectionTitle("Thông tin hành nghề"),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  _buildProfileRow(
-                    Icons.assignment_ind_outlined,
-                    "Mã số CCHN",
-                    "CCHN-001234",
-                  ),
-                  _buildProfileRow(
-                    Icons.local_hospital_outlined,
-                    "Nơi làm việc",
-                    "Bệnh viện Chợ Rẫy",
-                  ),
-                  _buildProfileRow(
-                    Icons.workspace_premium_outlined,
-                    "Kinh nghiệm",
-                    "10 năm kinh nghiệm",
-                  ),
-                  _buildProfileRow(
-                    Icons.payments_outlined,
-                    "Giá khám",
-                    "300.000 đ / lượt",
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // --- KHỐI CÀI ĐẶT LỊCH LÀM VIỆC ---
-            _buildSectionTitle("Cấu hình & Tài khoản"),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  _buildClickableRow(
-                    Icons.access_time,
-                    "Cài đặt khung giờ khám",
-                  ),
-                  _buildClickableRow(
-                    Icons.lock_outline,
-                    "Đổi mật khẩu tài khoản",
-                  ),
-                  _buildClickableRow(Icons.help_outline, "Hỗ trợ kỹ thuật"),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // --- NÚT ĐĂNG XUẤT ---
-            TextButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.logout, color: Colors.red),
-              label: const Text(
-                "Đăng xuất tài khoản",
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
     );
   }
 
@@ -228,12 +279,16 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
           ),
           const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Colors.black87,
+          // Bọc Flexible để text dài không bị tràn màn hình
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Colors.black87,
+              ),
             ),
           ),
         ],
@@ -249,7 +304,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Icon(icon, color: Colors.blue.shade400, size: 22),
+            Icon(icon, color: Colors.teal.shade400, size: 22),
             const SizedBox(width: 16),
             Text(
               label,

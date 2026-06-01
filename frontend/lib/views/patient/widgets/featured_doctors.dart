@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../doctor_detail_screen.dart';
-// (Sau này Quý import trang DoctorDetailScreen của Quý vào đây)
-// import '../doctor_detail_screen.dart';
 
 class FeaturedDoctors extends StatelessWidget {
   const FeaturedDoctors({super.key});
@@ -57,28 +55,34 @@ class FeaturedDoctors extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Bác sĩ nổi bật",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1C1E),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          "Bác sĩ nổi bật",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A1C1E),
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        "Chuyên gia hàng đầu sẵn sàng tư vấn",
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
-                    ],
+                        SizedBox(height: 4),
+                        Text(
+                          "Chuyên gia hàng đầu sẵn sàng tư vấn",
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 12),
                   TextButton(
                     onPressed: () {},
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.teal,
+                      foregroundColor:
+                          Colors.blue.shade700, // Đổi sang xanh nước biển
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
@@ -113,13 +117,11 @@ class FeaturedDoctors extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              // Đảm bảo thẻ luôn giãn đều, trên PC có thể hiển thị 4 cột, Mobile là 2 cột
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 280, // Chiều rộng lý tưởng cho 1 thẻ bác sĩ
+                maxCrossAxisExtent: 280,
                 mainAxisSpacing: 24,
                 crossAxisSpacing: 24,
-                childAspectRatio:
-                    0.75, // Tỷ lệ thẻ hình chữ nhật đứng (rộng / cao)
+                childAspectRatio: 0.65,
               ),
               itemCount: doctors.length,
               itemBuilder: (context, index) {
@@ -161,47 +163,45 @@ class _DoctorCardState extends State<_DoctorCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOutCubic,
-          // Hover: Thẻ sẽ nổi hẳn lên trên
           transform: Matrix4.translationValues(0, _isHover ? -10 : 0, 0),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: _isHover ? Colors.teal.shade300 : Colors.transparent,
+              color: _isHover
+                  ? Colors.blue.shade300
+                  : Colors.transparent, // Đổi sang xanh nước biển
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
                 color: _isHover
-                    ? Colors.teal.withOpacity(0.15)
+                    ? Colors.blue.withOpacity(0.15) // Đổi sang xanh nước biển
                     : Colors.black.withOpacity(0.04),
                 blurRadius: _isHover ? 24 : 12,
                 offset: const Offset(0, 8),
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. PHẦN ẢNH CHÂN DUNG (Nửa trên của thẻ)
-              Expanded(
-                flex: 5,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(22),
-                  ),
+          // Bọc toàn bộ Column bằng ClipRRect để đảm bảo nền gradient bên dưới
+          // và ảnh bên trên đều không bị tràn ra khỏi viền bo tròn 24px của Card.
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 1. PHẦN ẢNH CHÂN DUNG
+                Expanded(
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // Zoom nhẹ ảnh khi Hover để tạo chiều sâu
                       AnimatedScale(
                         scale: _isHover ? 1.05 : 1.0,
                         duration: const Duration(milliseconds: 400),
                         child: Image.network(
                           widget.doctor['image'],
                           fit: BoxFit.cover,
-                          alignment:
-                              Alignment.topCenter, // Ưu tiên hiển thị khuôn mặt
+                          alignment: Alignment.topCenter,
                           errorBuilder: (context, error, stackTrace) =>
                               Container(
                                 color: Colors.grey.shade200,
@@ -213,7 +213,6 @@ class _DoctorCardState extends State<_DoctorCard> {
                               ),
                         ),
                       ),
-                      // Điểm nhấn sao Đánh giá (Rating Badge) nổi trên ảnh
                       Positioned(
                         top: 12,
                         right: 12,
@@ -255,53 +254,61 @@ class _DoctorCardState extends State<_DoctorCard> {
                     ],
                   ),
                 ),
-              ),
 
-              // 2. PHẦN THÔNG TIN BÁC SĨ (Nửa dưới của thẻ)
-              Expanded(
-                flex: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
+                // 2. PHẦN THÔNG TIN BÁC SĨ CÓ NỀN GRADIENT NHẠT
+                Container(
+                  // Áp dụng Gradient mượt mà từ Trắng -> Xanh dương nhạt mờ ảo
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white,
+                        Color(
+                          0xFFEAF2FF,
+                        ), // Đổi sang mã màu Xanh nước biển nhạt
+                      ],
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.doctor['name'],
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: _isHover
-                                  ? Colors.teal.shade700
-                                  : const Color(0xFF1A1C1E),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.doctor['specialty'],
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        widget.doctor['name'],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: _isHover
+                              ? Colors
+                                    .blue
+                                    .shade700 // Đổi sang xanh nước biển
+                              : const Color(0xFF1A1C1E),
+                        ),
                       ),
-
-                      // Nút "Đặt khám ngay" giả lập hiện ra sắc nét khi Hover
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.doctor['specialty'],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: _isHover ? Colors.teal : Colors.teal.shade50,
+                          color: _isHover
+                              ? Colors.blue
+                              : Colors.blue.shade50, // Đổi sang xanh nước biển
                           borderRadius: BorderRadius.circular(12),
                         ),
                         alignment: Alignment.center,
@@ -312,15 +319,17 @@ class _DoctorCardState extends State<_DoctorCard> {
                             fontWeight: FontWeight.w600,
                             color: _isHover
                                 ? Colors.white
-                                : Colors.teal.shade700,
+                                : Colors
+                                      .blue
+                                      .shade700, // Đổi sang xanh nước biển
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

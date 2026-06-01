@@ -1,13 +1,19 @@
-import { Controller, Get, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { DoctorService } from "./doctor.service";
-import { Appointment } from "src/patient/interfaces/appointment.interface";
 import { Shift } from "./interfaces/shift.interface";
 import { DoctorEntity } from "./entities/doctor.entity";
+import { CancelShiftDto } from "./dto/cancelShift.dto";
+import { AppointmentEntity } from "src/patient/entities/appointment.entity";
+import { ConfirmAppointmentDTO } from "./dto/confirm.dto";
+import { ReAppointmentDTO } from "./dto/RA.dto";
+import { ShiftDTO } from "./dto/shift.dto";
+import { ShiftAssignmentEntity } from "./entities/shiftAssignment.entity";
+import { ShiftListDTO } from "./dto/shiftList.dto";
 
 @Controller('doctor')
 @ApiTags('doctor')
-export class DoctorController{
+export class DoctorController {
     constructor(private readonly doctorService: DoctorService) {};
 
     @Post('/create-doctor')
@@ -15,76 +21,58 @@ export class DoctorController{
         return this.doctorService.createDoctor();
     }
 
-    @Get('/list-unAcpappointment')
-    listUnaccpetAppointment(): Promise<Appointment[]> {
-        return this.doctorService.listUnacceptedAppointment();
+    @Get('/list-unAcpappointment/:doctorId')
+    listUnaccpetAppointment(@Param('doctorId') doctorId: number): Promise<AppointmentEntity[]> {
+        return this.doctorService.listUnacceptedAppointment(doctorId);
     }
 
-    @Get('/list-appointment')
-    listAcceptAppointment(): Promise<Appointment[]> {
-        return this.doctorService.listAcceptedAppointment();
+    @Get('/list-appointment/:doctorId')
+    listAcceptAppointment(@Param('doctorId') doctorId: number): Promise<AppointmentEntity[]> {
+        return this.doctorService.listAcceptedAppointment(doctorId);
     }
 
-    @Post('/addShift')
-    addWorkingTime(): Promise<Shift[]> {
-        let shifts: Shift[] = [
-            {
-                id: 1,
-                doctorId: 1,
-                type: 'morning',
-                startTime: new Date('2025-08-10'),
-                endTime: new Date('2025-08-10'),
-                emergency: 0
-            },
-            {
-                id: 2,
-                doctorId: 1,
-                type: 'morning',
-                startTime: new Date('2025-08-10'),
-                endTime: new Date('2025-08-10'),
-                emergency: 0
-            }
-        ];
-        return Promise.resolve(shifts);
+    @Post('/addShift/:id')
+    addWorkingTime(
+     @Param('id') doctorId: number,
+     @Body() body: ShiftListDTO,
+    ) {
+        return this.doctorService.addWorkingTime(doctorId, body.shifts);
     }
 
     @Post('/cancel-shift')
-    cancelShift(): Promise<void> {
-        /*
-        shift option A
-        This is uesed to return the value for the admin
-        it will return the time of the employee has done
-         */
-        return Promise.resolve();
+    cancelShift(@Body() body: CancelShiftDto): Promise<void> {
+        const { doctorId, shiftId } = body;
+        return this.doctorService.cancelShift(body.doctorId, body.shiftId);
     }
 
-    @Post('/reAppointment')
-    reAppointment(): Promise<Appointment> {
-        let newAppTime = new Date('2026-04-30');
-        let newConfirmDate = new Date('2026-05-01');
-        let newNote = 'Tai Kham';
-        let reAppointment: Appointment = {
-            id: 3,
-            apTime: newAppTime,
-            confirmDate: newConfirmDate,
-            address: 'abc',
-            note: newNote,
-            confirmCondition: 0,
-            doctor: 'Quan',
-            patientId: 1,
-            doctorId: 1
-        }
-        return Promise.resolve(reAppointment);
+    @Post('/reAppointment/:id')
+    reAppointment(@Param('id') reAppointmentId: number,@Body() reAppointmentDto: ReAppointmentDTO): Promise<AppointmentEntity> {
+        const { newApTime, newConfirmTime, newNote } = reAppointmentDto;
+        return this.doctorService.reAppointment(reAppointmentId, newApTime, newConfirmTime, newNote);
     }
 
-    @Post('/confirm-appointmnet')
-    confirmAppointment(): Promise<Appointment> {
-        let confirmDate = new Date('2026-10-1');
-        let note: string = 'day la de note';
-        let confirmCondition: number = 0;
-
-        //create new appointment with these informations
-        return Promise.resolve({} as Appointment);
+    // 🌟 ĐÃ SỬA: Sửa lỗi chính tả từ confirm-appointmnet thành confirm-appointment
+    @Post('/confirm-appointment/:id')
+    confirmAppointment(@Param('id') appointmentId: number,@Body() confirmDto: ConfirmAppointmentDTO): Promise<AppointmentEntity> {
+        const {note, confirmDate} = confirmDto;
+        return this.doctorService.confirmAppointment(appointmentId, confirmDto.note, confirmDto.confirmDate)
     }
 
+    @Delete('/delete-shift/:doctorId/shifts/:shiftId')
+    deleteShift(
+        @Param('doctorId') doctorId: number,
+        @Param('shiftId') shiftId: number
+    ) {
+        return this.doctorService.deleteShift(doctorId, shiftId);
+    }
+
+    @Get('/list-shift/:id')
+    listOfShift(@Param('id') doctorId: number){
+        return this.doctorService.listOfShifts(doctorId);
+    }
+
+    @Get('/list')
+    getAllDoctors(): Promise<DoctorEntity[]> {
+        return this.doctorService.getAllDoctors();
+    }
 }

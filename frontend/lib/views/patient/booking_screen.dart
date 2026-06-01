@@ -386,12 +386,10 @@ class _BookingScreenState extends State<BookingScreen> {
   // Giao diện ô thả xuống
   Widget _buildDropdown(String hint, List<String> items) {
     return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
+      isExpanded: true, // <--- THÊM ĐÚNG DÒNG NÀY VÀO ĐÂY LÀ CHỮ TỰ CO LẠI
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       hint: Text(hint),
       items: items

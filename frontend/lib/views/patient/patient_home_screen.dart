@@ -1,74 +1,131 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:shared_preferences/shared_preferences.dart'; 
 
-// Import các màn hình khác (Nếu chưa dùng tới Quý có thể comment lại)
-// import 'ai_chat_screen.dart';
-// import 'doctor_detail_screen.dart';
+import '../../services/api_service.dart';
+import '../../models/patient_model.dart';
 
-// --- IMPORT CÁC COMPONENT GIAO DIỆN CHÚNG TA ĐÃ TÁCH RIÊNG ---
 import 'widgets/home_header.dart';
 import 'widgets/banner_slider.dart';
 import 'widgets/quick_actions_grid.dart';
 import 'widgets/featured_doctors.dart';
-import 'widgets/floating_ai_bubble.dart'; // BONG BÓNG AI
+import 'widgets/floating_ai_bubble.dart'; 
+import 'login_screen.dart'; 
 
-class PatientHomeScreen extends StatelessWidget {
+class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
 
   @override
+  State<PatientHomeScreen> createState() => _PatientHomeScreenState();
+}
+
+class _PatientHomeScreenState extends State<PatientHomeScreen> {
+  Patient? _patientProfile; 
+  bool _isLoading = true; 
+  String _savedName = "Bệnh nhân"; // Đổi tên mặc định cho chuyên nghiệp hơn
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatientData(); 
+  }
+
+  // 🌟 Hàm vuốt để tải lại trang (Bắt buộc phải trả về Future cho RefreshIndicator)
+  Future<void> _loadPatientData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      int savedId = prefs.getInt('patientId') ?? 1; 
+      String? savedName = prefs.getString('patientName');
+
+      if (savedName != null && mounted) {
+        setState(() {
+          _savedName = savedName;
+        });
+      }
+
+      final data = await ApiService.getPatientProfile(savedId);
+
+      if (mounted) {
+        setState(() {
+          _patientProfile = data;
+          _isLoading = false; 
+        });
+      }
+    } catch (e) {
+      debugPrint("Lỗi tải profile trang chủ: $e");
+      if (mounted) {
+        setState(() {
+          _isLoading = false; 
+        });
+      }
+    }
+  }
+
+  // 🌟 HÀM ĐĂNG XUẤT: Xóa sạch bộ nhớ và đẩy về Login
+  Future<void> _handleLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Quét sạch mọi ID, trạng thái đã lưu
+
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false, // Xóa hết lịch sử các trang trước
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    String currentName = _savedName; 
+    String currentAvatar = "https://api.dicebear.com/7.x/avataaars/svg?seed=$currentName";
+
+    if (_patientProfile != null) {
+      currentName = _patientProfile!.name;
+      if (_patientProfile!.avatar.isNotEmpty) {
+        currentAvatar = _patientProfile!.avatar;
+      }
+    }
+
     return Scaffold(
-      backgroundColor: const Color(
-        0xFFF8FBFB,
-      ), // Màu nền tổng thể hơi xám xanh nhạt cho sạch
-      // DÙNG STACK ĐỂ ĐÈ BONG BÓNG LÊN TRÊN CÙNG
+      backgroundColor: const Color(0xFFF4F9FF), 
       body: Stack(
         children: [
-          // LỚP DƯỚI: Toàn bộ nội dung trang web/app có thể cuộn được
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                // 1. GẮN COMPONENT HEADER
-                const HomeHeader(
-                  patientName: "Thái Văn Quý",
-                  avatarUrl:
-                      "https://api.dicebear.com/7.x/avataaars/svg?seed=Quý",
-                ),
-                const SizedBox(height: 10),
+          // 🌟 RefreshIndicator: Bọc ngoài SingleChildScrollView để vuốt xuống load lại
+          RefreshIndicator(
+            onRefresh: _loadPatientData,
+            color: Colors.blue,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(), // Bắt buộc để vuốt được cả khi trang ngắn
+              child: Column(
+                children: [
+                  // TODO: Truyền thêm hàm _handleLogout vào HomeHeader nếu Header của bạn có nút Đăng xuất
+                  HomeHeader(patientName: currentName, avatarUrl: currentAvatar),
+                  const SizedBox(height: 10),
 
-                // HIỆU ỨNG ANIMATION (Các thành phần sẽ trượt từ dưới lên khi mở app)
-                AnimationLimiter(
-                  child: Column(
-                    children: AnimationConfiguration.toStaggeredList(
-                      duration: const Duration(milliseconds: 600),
-                      childAnimationBuilder: (widget) => SlideAnimation(
-                        verticalOffset: 30.0,
-                        child: FadeInAnimation(child: widget),
+                  AnimationLimiter(
+                    child: Column(
+                      children: AnimationConfiguration.toStaggeredList(
+                        duration: const Duration(milliseconds: 600),
+                        childAnimationBuilder: (widget) => SlideAnimation(
+                          verticalOffset: 30.0,
+                          child: FadeInAnimation(child: widget),
+                        ),
+                        children: [
+                          const BannerSlider(),
+                          const SizedBox(height: 20),
+                          const QuickActionsGrid(),
+                          const SizedBox(height: 10),
+                          const FeaturedDoctors(),
+                          const SizedBox(height: 30), 
+                        ],
                       ),
-                      children: [
-                        // 2. BANNER SLIDER
-                        const BannerSlider(),
-                        const SizedBox(height: 20),
-
-                        // 3. MENU CHỨC NĂNG (Giao diện thẻ Responsive mới làm)
-                        const QuickActionsGrid(),
-                        const SizedBox(height: 10),
-
-                        // 4. BÁC SĨ NỔI BẬT (Gắn nguyên cục Component xịn sò vào đây)
-                        const FeaturedDoctors(),
-
-                        const SizedBox(
-                          height: 30,
-                        ), // Khoảng cách chừa dưới cùng
-                      ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-
-          // LỚP TRÊN CÙNG: Bong bóng Bác sĩ AI lơ lửng và kéo thả được
           const FloatingAIBubble(),
         ],
       ),

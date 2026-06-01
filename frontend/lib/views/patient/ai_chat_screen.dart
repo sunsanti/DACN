@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'appointment_screen.dart'; // 🌟 Import màn hình đặt lịch của Quý để chuyển data
 
 class AIChatScreen extends StatefulWidget {
   const AIChatScreen({super.key});
@@ -11,41 +12,54 @@ class _AIChatScreenState extends State<AIChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
+  
+  // 🌟 THAM SỐ MỚI: Dùng để lưu kết quả cấu trúc sẽ đẩy qua file PDF của Bác sĩ
+  String? _finalAiDiagnosis; 
 
   // Danh sách tin nhắn mẫu
   final List<Map<String, dynamic>> _messages = [
     {
       "isMe": false,
-      "text":
-          "Xin chào Quý! Tôi là Trợ lý Y tế AI. Quý đang gặp vấn đề gì về sức khỏe cần tôi tư vấn hôm nay?",
+      "text": "Xin chào Quý! Tôi là Trợ lý Y tế AI. Quý đang gặp vấn đề gì về sức khỏe cần tôi tư vấn hôm nay?",
       "time": "10:00 AM",
     },
   ];
 
-  // Hàm xử lý khi gửi tin nhắn
+  // Hàm xử lý khi gửi tin nhắn (Đã tích hợp luồng xử lý AI của Quý)
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
 
     final userText = _messageController.text;
 
     setState(() {
-      // Thêm tin nhắn của người dùng vào danh sách
       _messages.add({"isMe": true, "text": userText, "time": "Vừa xong"});
       _messageController.clear();
-      _isTyping = true; // AI bắt đầu "suy nghĩ"
+      _isTyping = true; 
     });
 
     _scrollToBottom();
 
-    // Giả lập độ trễ AI trả lời (2 giây)
+    // Giả lập độ trễ AI xử lý Tiền xử lý -> Model 1 -> Model 2 -> Kiểm tra dấu hiệu nguy hiểm (2 giây)
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
       setState(() {
         _isTyping = false;
+
+        // 🌟 1. ĐÂY LÀ CHUỖI KẾT QUẢ SẼ ĐƯỢC KHÓA LẠI ĐỂ IN VÀO PDF GỬI BÁC SĨ:
+        _finalAiDiagnosis = 
+            "• Chuyên khoa gợi ý: Da liễu\n"
+            "• Dự đoán bệnh lý: Viêm da tiếp xúc dị ứng / Mề đay cấp tính\n"
+            "• Dấu hiệu nguy hiểm: KHÔNG PHÁT HIỆN (Không có sốc phản vệ, không khó thở)\n"
+            "• Ghi chú hệ thống: Đã khóa dữ liệu khai báo tự động từ Chatbot AI.";
+
+        // 🌟 2. AI TRẢ LỜI TỰ NHIÊN TRÊN BONG BÓNG CHAT:
         _messages.add({
           "isMe": false,
-          "text":
-              "Tôi đã ghi nhận triệu chứng của bạn. Để chẩn đoán chính xác hơn, bạn có bị sốt hay đau mỏi ở đâu không?",
+          "text": "Tôi đã phân tích xong triệu chứng của Quý bằng mô hình học máy. Dưới đây là kết quả sơ bộ:\n\n"
+                  "🏥 Chuyên khoa đề xuất: DA LIỄU\n"
+                  "🧬 Bệnh lý có thể liên quan: Viêm da dị ứng hoặc tổn thương biểu bì nông.\n"
+                  "⚠️ Cảnh báo nguy hiểm: An toàn (Không có dấu hiệu cấp cứu).\n\n"
+                  "Hệ thống đã tự động khóa kết quả này để chuyển thẳng vào Phiếu chẩn đoán của Bác sĩ. Quý vui lòng bấm nút phía dưới để chuyển sang màn hình chọn giờ khám nhé!",
           "time": "Vừa xong",
         });
       });
@@ -68,7 +82,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F5), // Màu nền hơi xám nhẹ cho sạch
+      backgroundColor: const Color(0xFFF4F9FF), 
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 1,
@@ -79,7 +93,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
             Stack(
               children: [
                 CircleAvatar(
-                  backgroundColor: Colors.teal.shade50,
+                  backgroundColor: Colors.blue.shade50, 
                   backgroundImage: const NetworkImage(
                     'https://cdn-icons-png.flaticon.com/512/4712/4712010.png',
                   ),
@@ -91,7 +105,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                     width: 12,
                     height: 12,
                     decoration: BoxDecoration(
-                      color: Colors.greenAccent.shade400,
+                      color: Colors.greenAccent.shade400, 
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
@@ -113,7 +127,10 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 ),
                 Text(
                   "Luôn sẵn sàng hỗ trợ",
-                  style: TextStyle(color: Colors.green, fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontSize: 12,
+                  ), 
                 ),
               ],
             ),
@@ -122,9 +139,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 800,
-          ), // Rất quan trọng: Giới hạn độ rộng trên màn hình máy tính
+          constraints: const BoxConstraints(maxWidth: 800), 
           child: Column(
             children: [
               // 1. KHU VỰC HIỂN THỊ TIN NHẮN
@@ -161,7 +176,41 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   ),
                 ),
 
-              // 3. THANH NHẬP LIỆU (Input Field)
+              // 🌟 3. NÚT ĐẨY DỮ LIỆU SANG LỊCH KHÁM (Chỉ xuất hiện khi đã có kết quả _finalAiDiagnosis)
+              if (_finalAiDiagnosis != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.calendar_month, color: Colors.white),
+                      label: const Text(
+                        "ĐẶT LỊCH VỚI KẾT QUẢ AI", 
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade600, // Màu xanh lá tạo độ tin cậy, nổi bật
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        elevation: 2,
+                      ),
+                      onPressed: () {
+                        // Điều hướng sang AppointmentScreen và truyền cứng chuỗi kết quả AI qua constructor
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AppointmentScreen(
+                              patientId: 1, // Thay bằng ID thực tế của Quý nếu có
+                              aiDiagnosisResult: _finalAiDiagnosis,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+              // 4. THANH NHẬP LIỆU (Input Field)
               _buildInputArea(),
             ],
           ),
@@ -170,20 +219,18 @@ class _AIChatScreenState extends State<AIChatScreen> {
     );
   }
 
-  // Giao diện bong bóng tin nhắn
+  // Giao diện bong bóng tin nhắn (Giữ nguyên toàn bộ tham số cũ của Quý)
   Widget _buildChatBubble(String text, bool isMe, String time) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         constraints: BoxConstraints(
-          maxWidth:
-              MediaQuery.of(context).size.width *
-              0.7, // Không dài quá 70% màn hình
+          maxWidth: MediaQuery.of(context).size.width * 0.7, 
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isMe ? Colors.teal : Colors.white,
+          color: isMe ? Colors.blue : Colors.white, 
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -199,9 +246,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           ],
         ),
         child: Column(
-          crossAxisAlignment: isMe
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
+          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             Text(
               text,
@@ -215,7 +260,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
             Text(
               time,
               style: TextStyle(
-                color: isMe ? Colors.teal.shade100 : Colors.grey.shade500,
+                color: isMe ? Colors.blue.shade100 : Colors.grey.shade500, 
                 fontSize: 11,
               ),
             ),
@@ -225,7 +270,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
     );
   }
 
-  // Giao diện thanh nhập liệu
+  // Giao diện thanh nhập liệu (Giữ nguyên toàn bộ cấu trúc cũ của Quý)
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -263,7 +308,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: const BoxDecoration(
-                  color: Colors.teal,
+                  color: Colors.blue, 
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(

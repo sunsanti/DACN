@@ -77,13 +77,18 @@ class _FloatingAIBubbleState extends State<FloatingAIBubble> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.teal.withOpacity(0.4),
+                        color: Colors.blue.withOpacity(
+                          0.4,
+                        ), // Đổi shadow sang xanh nước biển
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
                     ],
                     // Viền phát sáng
-                    border: Border.all(color: Colors.teal.shade300, width: 2),
+                    border: Border.all(
+                      color: Colors.blue.shade300,
+                      width: 2,
+                    ), // Đổi viền sang xanh nước biển
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
@@ -102,7 +107,7 @@ class _FloatingAIBubbleState extends State<FloatingAIBubble> {
                     width: 14,
                     height: 14,
                     decoration: BoxDecoration(
-                      color: Colors.greenAccent.shade400,
+                      color: Colors.greenAccent.shade400, // Chuẩn UI Online
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),

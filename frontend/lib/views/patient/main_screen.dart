@@ -17,7 +17,7 @@ class _MainScreenState extends State<MainScreen> {
   // Danh sách 4 màn hình tương ứng với 4 Tab
   final List<Widget> _screens = [
     const PatientHomeScreen(),
-    const AppointmentDashboardScreen(),
+    const AppointmentScreen(),
     const AIChatScreen(),
     const ProfileScreen(), // Đã gắn màn hình Hồ sơ vào đây
   ];
@@ -29,7 +29,8 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedItemColor: Colors.teal,
+        selectedItemColor:
+            Colors.blue.shade700, // Đổi từ teal sang xanh nước biển
         unselectedItemColor: Colors.grey.shade400,
         currentIndex: _selectedIndex,
         onTap: (index) {

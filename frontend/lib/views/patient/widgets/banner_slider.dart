@@ -9,12 +9,15 @@ class BannerSlider extends StatefulWidget {
 }
 
 class _BannerSliderState extends State<BannerSlider> {
-  // PageController giúp điều khiển thao tác vuốt trang
   final PageController _pageController = PageController();
   int _currentPage = 0;
   Timer? _timer;
 
-  // Danh sách dữ liệu Banner (Sau này Quý có thể gọi từ Backend trả về)
+  // --- BỘ MÀU CHUẨN (Đồng bộ với Header) ---
+  final Color primaryDark = const Color(0xFF03103F);
+  final Color accentBlue = const Color(0xFF0084FF);
+
+  // Danh sách dữ liệu Banner
   final List<Map<String, String>> _banners = [
     {
       "image":
@@ -39,7 +42,6 @@ class _BannerSliderState extends State<BannerSlider> {
   @override
   void initState() {
     super.initState();
-    // Cài đặt Timer tự động chuyển trang mỗi 4 giây
     _timer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
       if (_currentPage < _banners.length - 1) {
         _currentPage++;
@@ -47,12 +49,13 @@ class _BannerSliderState extends State<BannerSlider> {
         _currentPage = 0;
       }
 
-      // Kiểm tra xem widget còn tồn tại không trước khi hiệu ứng chạy
       if (_pageController.hasClients) {
         _pageController.animateToPage(
           _currentPage,
-          duration: const Duration(milliseconds: 600), // Thời gian vuốt rất êm
-          curve: Curves.fastOutSlowIn, // Hiệu ứng nhanh ở đầu, chậm dần ở cuối
+          duration: const Duration(
+            milliseconds: 800,
+          ), // Cho vuốt chậm và mượt hơn chút
+          curve: Curves.fastOutSlowIn,
         );
       }
     });
@@ -60,7 +63,7 @@ class _BannerSliderState extends State<BannerSlider> {
 
   @override
   void dispose() {
-    _timer?.cancel(); // Phải hủy Timer khi tắt app để tránh rò rỉ bộ nhớ
+    _timer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -69,9 +72,8 @@ class _BannerSliderState extends State<BannerSlider> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Khung ảnh Slider
         SizedBox(
-          height: 160, // Chiều cao lý tưởng cho Banner
+          height: 160,
           child: PageView.builder(
             controller: _pageController,
             onPageChanged: (int page) {
@@ -85,8 +87,7 @@ class _BannerSliderState extends State<BannerSlider> {
             },
           ),
         ),
-        const SizedBox(height: 12),
-        // Các chấm tròn Indicator ở dưới
+        const SizedBox(height: 16), // Tăng khoảng cách ra một chút cho thoáng
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
@@ -101,29 +102,37 @@ class _BannerSliderState extends State<BannerSlider> {
   // --- HÀM VẼ TỪNG BANNER ---
   Widget _buildBannerItem(Map<String, String> banner) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(
+        horizontal: 24,
+      ), // Căn lề chuẩn 24 như Header
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         image: DecorationImage(
           image: NetworkImage(banner["image"]!),
           fit: BoxFit.cover,
         ),
+        // Hiệu ứng bóng đổ màu xanh loang nhẹ
         boxShadow: [
           BoxShadow(
-            color: Colors.teal.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: accentBlue.withOpacity(0.25),
+            blurRadius: 15,
+            spreadRadius: 2,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Container(
-        // Lớp phủ Gradient đen mờ giúp chữ trắng nổi bật lên (Kỹ thuật Dark Overlay)
+        // Hiệu ứng xanh loang từ dưới lên (Soft Blue Overlay)
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
-            colors: [Colors.black.withOpacity(0.7), Colors.transparent],
-            begin: Alignment.bottomLeft,
-            end: Alignment.topRight,
+            colors: [
+              primaryDark.withOpacity(0.85), // Đáy màu Navy đậm để làm bật chữ
+              accentBlue.withOpacity(0.4), // Giữa loang màu xanh sáng
+              Colors.transparent, // Trên cùng trong suốt để thấy hình
+            ],
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
           ),
         ),
         padding: const EdgeInsets.all(20),
@@ -137,15 +146,19 @@ class _BannerSliderState extends State<BannerSlider> {
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                letterSpacing: 0.2, // Giãn chữ nhẹ cho sang
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               banner["subtitle"]!,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withOpacity(0.85),
                 fontSize: 13,
+                fontWeight: FontWeight.w400,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -159,10 +172,10 @@ class _BannerSliderState extends State<BannerSlider> {
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(horizontal: 4),
       height: 6,
-      // Nút đang chọn thì dài ra thành viên thuốc, nút không chọn thì tròn
-      width: isActive ? 20 : 6,
+      width: isActive ? 24 : 6, // Viên thuốc dài hơn chút để tạo điểm nhấn
       decoration: BoxDecoration(
-        color: isActive ? Colors.teal : Colors.teal.withOpacity(0.2),
+        // Đổi màu chấm tròn sang bộ màu mới
+        color: isActive ? accentBlue : accentBlue.withOpacity(0.2),
         borderRadius: BorderRadius.circular(10),
       ),
     );

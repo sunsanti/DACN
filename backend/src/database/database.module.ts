@@ -7,13 +7,13 @@ import { TypeOrmModule } from "@nestjs/typeorm";
         host: 'localhost',
         port: 5432,
         username: 'postgres',
-        password: '123456',
+        password: '12345',
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         database: 'dacn_db',
-        synchronize: true,
+        synchronize: false,
         logger: 'advanced-console',
         autoLoadEntities: true
     })],
     exports: [TypeOrmModule]
 })
-export class DatabaseModule {}
+export class DatabaseModule { }

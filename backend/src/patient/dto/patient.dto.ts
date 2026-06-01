@@ -1,25 +1,24 @@
 import { IsEmail, IsInt, IsDate, IsString } from 'class-validator';
 
 export class PatientDTO {
+    @IsString()
+    name!: string;
 
     @IsString()
-    name: string;
-
-    @IsString()
-    gender: string;
+    gender!: string;
 
     @IsInt()
-    age: number;
+    age!: number;
 
     @IsDate()
-    birthDate: Date;
+    birthDate!: Date;
 
     @IsEmail()
-    email: string;
+    email!: string;
 
     @IsString()
-    phone: string;
+    phone!: string;
 
     @IsString()
-    address: string;
+    address!: string;
 }

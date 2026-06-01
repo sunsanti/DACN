@@ -3,37 +3,50 @@ import 'package:flutter/material.dart';
 class DoctorHomeScreen extends StatelessWidget {
   const DoctorHomeScreen({super.key});
 
+  // --- BỘ MÀU THEME CHUẨN ---
+  final Color primaryDark = const Color(0xFF03103F);
+  final Color accentBlue = const Color(0xFF0084FF);
+  final Color lightBG = const Color(0xFFF5F7F9);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(
-        0xFFF5F7F9,
-      ), // Màu nền xám nhạt cho app chuyên nghiệp
+      backgroundColor: lightBG,
+      // APPBAR NAVY ĐỒNG BỘ
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: primaryDark,
         elevation: 0,
         title: Row(
           children: [
-            const CircleAvatar(
-              radius: 20,
-              backgroundImage: NetworkImage(
-                'https://i.pravatar.cc/150?img=11',
-              ), // Ảnh giả lập bác sĩ
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white24, width: 2),
+              ),
+              child: const CircleAvatar(
+                radius: 18,
+                backgroundImage: NetworkImage(
+                  'https://i.pravatar.cc/150?img=11',
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Chào buổi sáng,",
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                ),
                 Text(
+                  "Chào buổi sáng,",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                ),
+                const Text(
                   "BS. Trần Văn A",
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade900,
+                    color: Colors.white,
                   ),
                 ),
               ],
@@ -42,12 +55,16 @@ class DoctorHomeScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-              color: Colors.black87,
+            icon: const Badge(
+              label: Text('3'), // Báo hiệu có thông báo mới
+              child: Icon(
+                Icons.notifications_none_rounded,
+                color: Colors.white,
+              ),
             ),
             onPressed: () {},
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
@@ -55,55 +72,68 @@ class DoctorHomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- PHẦN 1: THỐNG KÊ NHANH ---
-            Text(
-              "Tổng quan hôm nay",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue.shade900,
-              ),
+            // --- PHẦN 1: TỔNG QUAN TIẾN ĐỘ HÔM NAY ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Tiến độ hôm nay",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: primaryDark,
+                  ),
+                ),
+                Text(
+                  "15 Tháng 5, 2026",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: accentBlue,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    "Ca khám\nhôm nay",
-                    "12",
-                    Icons.people_alt_rounded,
-                    Colors.blue,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    "Chờ xác\nnhận",
-                    "03",
-                    Icons.pending_actions_rounded,
-                    Colors.orange,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    "Đã hoàn\nthành",
+                    "Đã khám",
                     "05",
-                    Icons.check_circle_outline_rounded,
-                    Colors.green,
+                    Icons.check_circle_rounded,
+                    const Color(0xFF10B981), // Xanh lá
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    "Đang chờ",
+                    "07",
+                    Icons.hourglass_bottom_rounded,
+                    const Color(0xFFF59E0B), // Cam
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    "Lịch mới",
+                    "03",
+                    Icons.calendar_month_rounded,
+                    accentBlue,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 32),
 
-            // --- PHẦN 2: CA KHÁM TIẾP THEO ---
+            // --- PHẦN 2: CA KHÁM HIỆN TẠI / TIẾP THEO ---
             Text(
               "Ca khám tiếp theo",
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue.shade900,
+                color: primaryDark,
               ),
             ),
             const SizedBox(height: 16),
@@ -111,36 +141,49 @@ class DoctorHomeScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
-            // --- PHẦN 3: DANH SÁCH CẦN DUYỆT GẤP ---
+            // --- PHẦN 3: LỊCH TRÌNH SẮP TỚI (Mini Timeline) ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Yêu cầu đặt lịch mới",
+                  "Lịch trình sắp tới",
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade900,
+                    color: primaryDark,
                   ),
                 ),
                 TextButton(
                   onPressed: () {
-                    // Sẽ chuyển sang Tab Lịch hẹn
+                    // Chuyển sang Tab Lịch hẹn
                   },
-                  child: const Text("Xem tất cả"),
+                  child: Text(
+                    "Xem toàn bộ",
+                    style: TextStyle(
+                      color: accentBlue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            _buildPendingRequestCard(
-              "Nguyễn Văn Quý",
-              "09:30 AM - Hôm nay",
-              "Khám tổng quát",
-            ),
-            _buildPendingRequestCard(
+            _buildUpcomingScheduleCard(
+              "09:00 AM",
               "Lê Thị B",
-              "14:00 PM - Ngày mai",
               "Tái khám huyết áp",
+              true,
+            ),
+            _buildUpcomingScheduleCard(
+              "09:30 AM",
+              "Trần Văn C",
+              "Tư vấn dinh dưỡng",
+              false,
+            ),
+            _buildUpcomingScheduleCard(
+              "10:00 AM",
+              "Nguyễn Thu D",
+              "Đọc kết quả xét nghiệm",
+              false,
             ),
           ],
         ),
@@ -148,7 +191,7 @@ class DoctorHomeScreen extends StatelessWidget {
     );
   }
 
-  // Widget vẽ Thẻ thống kê
+  // --- WIDGET: THẺ THỐNG KÊ NHANH ---
   Widget _buildStatCard(
     String title,
     String count,
@@ -156,41 +199,49 @@ class DoctorHomeScreen extends StatelessWidget {
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              Text(
+                count,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: primaryDark,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          Text(
-            count,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
           Text(
             title,
             style: TextStyle(
               fontSize: 13,
+              fontWeight: FontWeight.w600,
               color: Colors.grey.shade600,
-              height: 1.2,
             ),
           ),
         ],
@@ -198,109 +249,174 @@ class DoctorHomeScreen extends StatelessWidget {
     );
   }
 
-  // Widget vẽ Thẻ Bệnh nhân tiếp theo
+  // --- WIDGET: CA KHÁM TIẾP THEO (GÂY CHÚ Ý NHẤT) ---
   Widget _buildNextPatientCard() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(
+        16,
+      ), // Giảm nhẹ padding từ 20 xuống 16 để tăng không gian
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue.shade700, Colors.blue.shade500],
+          colors: [primaryDark, const Color(0xFF0F267A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: primaryDark.withOpacity(0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
+          // THAY ĐỔI Ở ĐÂY: Dùng Wrap + SizedBox dể tự động xuống dòng khi màn hình hẹp
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              runSpacing: 8, // Khoảng cách giữa các dòng nếu bị rớt dòng
+              spacing: 8, // Khoảng cách giữa các phần tử trên cùng hàng
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accentBlue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: accentBlue.withOpacity(0.5)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize
+                        .min, // Đảm bảo Row không chiếm hết chiều ngang
+                    children: [
+                      Icon(
+                        Icons.meeting_room_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        "Phòng khám 102",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_rounded,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE11D48),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    "08:30 AM (Đang chờ)",
+                    style: TextStyle(
                       color: Colors.white,
-                      size: 16,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(width: 6),
-                    Text(
-                      "08:30 AM",
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 26,
+                backgroundColor: Colors.white,
+                child: Text(
+                  "H",
+                  style: TextStyle(
+                    color: primaryDark,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                // Đảm bảo text không đẩy văng widget khác
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Hoàng Trọng C.",
                       style: TextStyle(
                         color: Colors.white,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Nam • 45 tuổi • Mã: BN-1092",
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 13,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Text(
-                "Phòng khám 102",
-                style: TextStyle(color: Colors.white),
-              ),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              const CircleAvatar(
-                radius: 25,
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, color: Colors.blue),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Bệnh nhân: Hoàng Trọng C",
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.monitor_heart_rounded,
+                  color: Colors.white.withOpacity(0.8),
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Lý do: Khám tổng quát, đau nhẹ vùng ngực.",
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "Nam - 45 tuổi",
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withOpacity(0.9),
                       fontSize: 13,
                     ),
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () {},
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.blue.shade700,
-              minimumSize: const Size(double.infinity, 45),
+              backgroundColor: accentBlue,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
+              elevation: 0,
             ),
             child: const Text(
-              "XEM HỒ SƠ BỆNH ÁN",
-              style: TextStyle(fontWeight: FontWeight.bold),
+              "BẮT ĐẦU KHÁM",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
         ],
@@ -308,25 +424,64 @@ class DoctorHomeScreen extends StatelessWidget {
     );
   }
 
-  // Widget vẽ Danh sách chờ duyệt
-  Widget _buildPendingRequestCard(String name, String time, String reason) {
+  // --- WIDGET: LỊCH TRÌNH SẮP TỚI ---
+  Widget _buildUpcomingScheduleCard(
+    String time,
+    String name,
+    String reason,
+    bool isNext,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: isNext ? accentBlue.withOpacity(0.5) : Colors.transparent,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              shape: BoxShape.circle,
+          SizedBox(
+            width: 70,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  time.split(' ')[0],
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: primaryDark,
+                  ),
+                ),
+                Text(
+                  time.split(' ')[1],
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-            child: const Icon(Icons.event_note_rounded, color: Colors.orange),
+          ),
+          Container(
+            width: 3,
+            height: 40,
+            decoration: BoxDecoration(
+              color: isNext ? accentBlue : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -335,31 +490,21 @@ class DoctorHomeScreen extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
+                    color: primaryDark,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  time,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                ),
-                Text(
-                  "Lý do: $reason",
+                  reason,
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                 ),
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.check_circle_rounded,
-              color: Colors.green,
-              size: 28,
-            ),
-            onPressed: () {}, // Nút duyệt nhanh
-          ),
+          Icon(Icons.more_vert_rounded, color: Colors.grey.shade400),
         ],
       ),
     );

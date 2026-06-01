@@ -4,26 +4,26 @@ import { IsDate, IsNumber, IsString } from "class-validator";
 export class DoctorDTO {
     @ApiProperty()
     @IsString()
-    name: string;
+    name!: string;
 
     @ApiProperty()
     @IsNumber()
-    age: number;
+    age!: number;
 
     @ApiProperty()
     @IsDate()
-    dateOfBirth: Date
+    dateOfBirth!: Date;
 
     @ApiProperty()
     @IsString()
-    phone: string
+    phone!: string;
 
     @ApiProperty()
     @IsString()
-    address: string;
+    address!: string;
 
     @ApiProperty()
     @IsString()
-    email: string
+    email!: string
     
 }
