@@ -7,12 +7,14 @@ import {
     UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { ApiBody, ApiConsumes, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { AiService } from "./ai.service";
 import { ChatDTO } from "./dto/chat.dto";
+import { Roles } from "../common/decorators/roles.decorator";
 
 @ApiTags("ai")
+@ApiBearerAuth()
 @Controller("ai")
 export class AiController {
     constructor(private readonly aiService: AiService) {}
@@ -39,6 +41,7 @@ export class AiController {
     }
 
     /** Tổng hợp ảnh + triệu chứng -> file PDF chẩn đoán sơ bộ gửi bác sĩ. */
+    @Roles("patient")
     @Post("report")
     @ApiConsumes("multipart/form-data")
     @ApiBody({
@@ -47,6 +50,7 @@ export class AiController {
             properties: {
                 image: { type: "string", format: "binary" },
                 symptoms: { type: "string" },
+                appointmentId: { type: "integer" },
             },
         },
     })
@@ -54,9 +58,14 @@ export class AiController {
     async report(
         @UploadedFile() image: Express.Multer.File,
         @Body("symptoms") symptoms: string,
+        @Body("appointmentId") appointmentId: string,
         @Res() res: Response,
     ) {
-        const pdf = await this.aiService.buildReport(image, symptoms);
+        const pdf = await this.aiService.buildReport(
+            image,
+            symptoms,
+            appointmentId ? Number(appointmentId) : undefined,
+        );
         res.set({
             "Content-Type": "application/pdf",
             "Content-Disposition": 'attachment; filename="ai-report.pdf"',

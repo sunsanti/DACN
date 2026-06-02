@@ -7,7 +7,7 @@ import { PatientEntity } from "../entities/patient.entity";
 import { AppointmentEntity } from "../entities/appointment.entity";
 
 export interface IPatientService {
-    setAppointment(dto: CreateAppoinmentDTO): Promise<AppointmentEntity>;
+    setAppointment(patientId: number, dto: CreateAppoinmentDTO): Promise<AppointmentEntity>;
     createPatient(): Promise<PatientEntity>;
     // findByFilter(filter: {date?: Date; apName: string});
     deleteAppointment(id: number): Promise<void>;

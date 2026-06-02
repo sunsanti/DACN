@@ -6,6 +6,7 @@ import { ShiftAssignmentEntity } from "./doctor/entities/shiftAssignment.entity"
 import { AppointmentEntity } from "../src/patient/entities/appointment.entity";
 import { PatientEntity } from "./patient/entities/patient.entity";
 import { AccountEntity } from "./auth/entities/account.entity";
+import { MedicalReportEntity } from "./patient/entities/medical_report.entity";
 
 export const AppDataSource = new DataSource({
     type: "postgres",
@@ -20,7 +21,8 @@ export const AppDataSource = new DataSource({
         ShiftAssignmentEntity,
         AppointmentEntity,
         PatientEntity,
-        AccountEntity
+        AccountEntity,
+        MedicalReportEntity
     ],
     migrations: ["src/migrations/*.ts"],
     synchronize: false

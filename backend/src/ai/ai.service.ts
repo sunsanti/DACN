@@ -1,7 +1,11 @@
 import { HttpException, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 import PDFDocument from "pdfkit";
 import * as fs from "fs";
+import { MedicalReportEntity } from "../patient/entities/medical_report.entity";
+import { AppointmentEntity } from "../patient/entities/appointment.entity";
 
 export interface DiagnosisItem {
     disease: string;
@@ -18,7 +22,11 @@ export interface DiagnosisItem {
 export class AiService {
     private readonly baseUrl: string;
 
-    constructor(private readonly config: ConfigService) {
+    constructor(
+        private readonly config: ConfigService,
+        @InjectRepository(MedicalReportEntity)
+        private readonly reportRepo: Repository<MedicalReportEntity>,
+    ) {
         this.baseUrl =
             this.config.get<string>("AI_SERVICE_URL") ?? "http://localhost:8000";
     }
@@ -49,15 +57,24 @@ export class AiService {
     async buildReport(
         file: Express.Multer.File | undefined,
         symptoms?: string,
+        appointmentId?: number,
     ): Promise<Buffer> {
         const image = file ? await this.diagnoseImage(file) : null;
         const chat = symptoms?.trim() ? await this.chat(symptoms.trim()) : null;
-        return this.renderPdf({
+        const pdf = await this.renderPdf({
             symptoms,
             imageBuffer: file?.buffer,
             imageResults: image?.results ?? [],
             chatResults: Array.isArray(chat?.results) ? chat.results : [],
         });
+        // Persist the report linked to the appointment so the doctor can fetch it later.
+        if (appointmentId) {
+            await this.reportRepo.save({
+                appointment: { id: appointmentId } as AppointmentEntity,
+                pdf,
+            });
+        }
+        return pdf;
     }
 
     // ---- helpers -------------------------------------------------------------
