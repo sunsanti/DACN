@@ -1,6 +1,7 @@
 import { HttpException, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import PDFDocument from "pdfkit";
+import * as fs from "fs";
 
 export interface DiagnosisItem {
     disease: string;
@@ -53,6 +54,7 @@ export class AiService {
         const chat = symptoms?.trim() ? await this.chat(symptoms.trim()) : null;
         return this.renderPdf({
             symptoms,
+            imageBuffer: file?.buffer,
             imageResults: image?.results ?? [],
             chatResults: Array.isArray(chat?.results) ? chat.results : [],
         });
@@ -102,8 +104,43 @@ export class AiService {
         }
     }
 
+    /**
+     * Resolve a Unicode TTF that supports Vietnamese diacritics.
+     * Order: AI_PDF_FONT env override -> common Windows/macOS/Linux system fonts.
+     * pdfkit's built-in Helvetica does NOT render Vietnamese, hence this.
+     */
+    private resolveFonts(): { regular: string | null; bold: string | null } {
+        const exists = (p?: string | null) => {
+            try {
+                return !!p && fs.existsSync(p);
+            } catch {
+                return false;
+            }
+        };
+        const pick = (arr: (string | undefined)[]) =>
+            arr.find((p) => exists(p)) ?? null;
+
+        return {
+            regular: pick([
+                this.config.get<string>("AI_PDF_FONT"),
+                "C:/Windows/Fonts/arial.ttf",
+                "C:/Windows/Fonts/segoeui.ttf",
+                "/Library/Fonts/Arial.ttf",
+                "/System/Library/Fonts/Supplemental/Arial.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            ]),
+            bold: pick([
+                this.config.get<string>("AI_PDF_FONT_BOLD"),
+                "C:/Windows/Fonts/arialbd.ttf",
+                "C:/Windows/Fonts/segoeuib.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            ]),
+        };
+    }
+
     private renderPdf(data: {
         symptoms?: string;
+        imageBuffer?: Buffer;
         imageResults: DiagnosisItem[];
         chatResults: DiagnosisItem[];
     }): Promise<Buffer> {
@@ -114,49 +151,77 @@ export class AiService {
             doc.on("end", () => resolve(Buffer.concat(chunks)));
             doc.on("error", reject);
 
-            // NOTE: pdfkit's built-in fonts do not cover Vietnamese diacritics.
-            // To render Vietnamese reasons correctly, drop a Unicode TTF into
-            // backend/src/ai/assets/ and call doc.font(<path>) here.
-            doc.fontSize(18).text("PRELIMINARY AI DIAGNOSIS REPORT", { align: "center" });
+            // Register a Vietnamese-capable font (falls back to Helvetica if none found).
+            const fonts = this.resolveFonts();
+            if (fonts.regular) doc.registerFont("body", fonts.regular);
+            if (fonts.bold) doc.registerFont("bold", fonts.bold);
+            const FONT = fonts.regular ? "body" : "Helvetica";
+            const BOLD = fonts.bold ? "bold" : FONT;
+
+            doc.font(BOLD).fontSize(18).text("BÁO CÁO CHẨN ĐOÁN SƠ BỘ (AI)", {
+                align: "center",
+            });
             doc.moveDown(0.5);
-            doc.fontSize(10).fillColor("gray")
-                .text(`Generated: ${new Date().toISOString()}`, { align: "center" });
+            doc.font(FONT).fontSize(10).fillColor("gray")
+                .text(`Tạo lúc: ${new Date().toLocaleString("vi-VN")}`, { align: "center" });
             doc.fillColor("black").moveDown(1);
 
-            if (data.symptoms) {
-                doc.fontSize(12).text("Symptoms (patient):", { underline: true });
-                doc.fontSize(11).text(data.symptoms);
+            // Patient image (embedded). pdfkit supports JPEG/PNG buffers.
+            if (data.imageBuffer && data.imageBuffer.length) {
+                doc.font(BOLD).fontSize(12).text("Ảnh bệnh nhân cung cấp:");
+                doc.moveDown(0.3);
+                try {
+                    doc.image(data.imageBuffer, { fit: [260, 260], align: "center" });
+                } catch {
+                    doc.font(FONT).fontSize(10).fillColor("gray")
+                        .text("(Không hiển thị được ảnh — định dạng không hỗ trợ)")
+                        .fillColor("black");
+                }
                 doc.moveDown(1);
             }
 
-            doc.fontSize(12).text("1) Image model (Swin V2) - Top 3:", { underline: true });
-            this.writeItems(doc, data.imageResults);
+            if (data.symptoms) {
+                doc.font(BOLD).fontSize(12).text("Triệu chứng (bệnh nhân mô tả):");
+                doc.font(FONT).fontSize(11).text(data.symptoms);
+                doc.moveDown(1);
+            }
+
+            doc.font(BOLD).fontSize(12).text("1) Mô hình ảnh (Swin V2) — Top 3:");
+            this.writeItems(doc, data.imageResults, FONT, BOLD);
             doc.moveDown(1);
 
-            doc.fontSize(12).text("2) Symptom analysis (Gemini) - Top 3:", { underline: true });
-            this.writeItems(doc, data.chatResults);
+            doc.font(BOLD).fontSize(12).text("2) Phân tích triệu chứng (Gemini) — Top 3:");
+            this.writeItems(doc, data.chatResults, FONT, BOLD);
             doc.moveDown(1.5);
 
-            doc.fontSize(9).fillColor("gray").text(
-                "Luu y: ket qua AI chi mang tinh tham khao, khong thay the chan doan cua bac si.",
+            doc.font(FONT).fontSize(9).fillColor("gray").text(
+                "Lưu ý: kết quả AI chỉ mang tính tham khảo, không thay thế chẩn đoán của bác sĩ.",
             );
             doc.end();
         });
     }
 
-    private writeItems(doc: PDFKit.PDFDocument, items: DiagnosisItem[]) {
+    private writeItems(
+        doc: PDFKit.PDFDocument,
+        items: DiagnosisItem[],
+        FONT: string,
+        BOLD: string,
+    ) {
         if (!items || items.length === 0) {
-            doc.fontSize(11).fillColor("gray").text("  (no data)").fillColor("black");
+            doc.font(FONT).fontSize(11).fillColor("gray").text("   (không có dữ liệu)")
+                .fillColor("black");
             return;
         }
         items.forEach((it, i) => {
             const pct =
                 typeof it.confidence === "number"
-                    ? ` - ${(it.confidence * 100).toFixed(1)}%`
+                    ? ` — ${(it.confidence * 100).toFixed(1)}%`
                     : "";
-            doc.fontSize(11).fillColor("black").text(`  Top ${i + 1}: ${it.disease}${pct}`);
+            doc.font(BOLD).fontSize(11).fillColor("black")
+                .text(`   Top ${i + 1}: ${it.disease}${pct}`);
             if (it.reason) {
-                doc.fontSize(9).fillColor("gray").text(`        ${it.reason}`).fillColor("black");
+                doc.font(FONT).fontSize(9).fillColor("gray")
+                    .text(`        ${it.reason}`).fillColor("black");
             }
         });
     }
