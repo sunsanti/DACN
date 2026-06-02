@@ -1,0 +1,13 @@
+# AI service dependencies (Python 3.10+ recommended on Windows).
+# Install: python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
+# NOTE: torch wheel may differ per platform/CUDA — see https://pytorch.org/get-started/locally/
+
+torch
+torchvision
+timm
+pillow
+fastapi
+uvicorn[standard]
+python-multipart
+google-genai
+python-dotenv
