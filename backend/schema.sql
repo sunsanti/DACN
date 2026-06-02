@@ -1,18 +1,36 @@
 -- =====================================================================
--- DACN — Database schema (PostgreSQL)
--- Database: dacn_db
+-- DACN — FULL database setup (PostgreSQL)
 -- Generated from TypeORM entities in backend/src/**/entities/*.entity.ts
 --
--- Tables: patient, doctor, shift, appointment, "shiftAssignment"
+-- Use this when you have NO database yet. It will:
+--   1. create the database  "dacn_db"
+--   2. connect to it
+--   3. create all tables, foreign keys and recommended indexes
+--
+-- Run as the postgres superuser (matches backend/src/data-source.ts):
+--   psql -U postgres -h localhost -f backend/schema.sql
+--
+-- NOTE: lines starting with "\" are psql meta-commands — run this with
+--       the psql CLI (not pgAdmin's query tool). If "dacn_db" already
+--       exists, skip / comment out the CREATE DATABASE line.
+--
 -- Conventions follow what TypeORM generates for this project:
---   * PK            -> SERIAL
---   * string        -> character varying (no length)
---   * number (int)  -> integer
---   * Date          -> TIMESTAMP (without time zone)
---   * relation FK   -> <relation>Id integer, nullable, ON DELETE NO ACTION
--- Columns are NOT NULL unless the entity marks { nullable: true }.
+--   PK -> SERIAL | string -> character varying | number -> integer
+--   Date -> TIMESTAMP | relation FK -> <relation>Id integer, nullable,
+--   ON DELETE NO ACTION. Columns are NOT NULL unless { nullable: true }.
 -- =====================================================================
 
+-- 1) Create the database (cannot run inside a transaction; no IF NOT EXISTS in PG)
+CREATE DATABASE "dacn_db"
+    WITH ENCODING = 'UTF8'
+         TEMPLATE = template0
+         LC_COLLATE = 'C'
+         LC_CTYPE = 'C';
+
+-- 2) Connect to it
+\connect dacn_db
+
+-- 3) Build the schema
 BEGIN;
 
 -- Drop in reverse-dependency order so re-running is clean.
@@ -125,4 +143,18 @@ ALTER TABLE "shiftAssignment"
     FOREIGN KEY ("shiftId") REFERENCES "shift" ("id")
     ON DELETE NO ACTION ON UPDATE NO ACTION;
 
+-- ---------------------------------------------------------------------
+-- Recommended indexes on FK columns (Postgres does NOT auto-index FKs).
+-- Speeds up the lookups the services actually run (find by patient/doctor/shift).
+-- ---------------------------------------------------------------------
+CREATE INDEX "IDX_appointment_patientId"     ON "appointment"     ("patientId");
+CREATE INDEX "IDX_appointment_doctorId"      ON "appointment"     ("doctorId");
+CREATE INDEX "IDX_shiftAssignment_doctorId"  ON "shiftAssignment" ("doctorId");
+CREATE INDEX "IDX_shiftAssignment_shiftId"   ON "shiftAssignment" ("shiftId");
+
 COMMIT;
+
+-- =====================================================================
+-- Done. The schema now matches the TypeORM entities. Keep the app's
+-- data-source on synchronize:false so it does not try to alter this.
+-- =====================================================================
