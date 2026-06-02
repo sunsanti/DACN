@@ -1,8 +1,11 @@
-# Dependencies
+# Dependencies (installed via npm install)
 node_modules/
 
 # Claude Code
 .claude/
+
+# Knowledge base (local only)
+docs/
 
 # OS / editor
 .DS_Store
