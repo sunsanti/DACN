@@ -166,18 +166,25 @@ export class AiService {
                 .text(`Tạo lúc: ${new Date().toLocaleString("vi-VN")}`, { align: "center" });
             doc.fillColor("black").moveDown(1);
 
-            // Patient image (embedded). pdfkit supports JPEG/PNG buffers.
+            // Patient image (embedded). pdfkit's doc.image() does NOT advance the
+            // text cursor, so we draw at a fixed box then move doc.y below it to
+            // avoid the following text overlapping the picture.
             if (data.imageBuffer && data.imageBuffer.length) {
                 doc.font(BOLD).fontSize(12).text("Ảnh bệnh nhân cung cấp:");
                 doc.moveDown(0.3);
+                const boxH = 240;
+                const top = doc.y;
+                const left = doc.page.margins.left;
                 try {
-                    doc.image(data.imageBuffer, { fit: [260, 260], align: "center" });
+                    doc.image(data.imageBuffer, left, top, { fit: [240, boxH] });
+                    doc.y = top + boxH + 12; // reserve the full image box height
+                    doc.x = left;
                 } catch {
                     doc.font(FONT).fontSize(10).fillColor("gray")
                         .text("(Không hiển thị được ảnh — định dạng không hỗ trợ)")
                         .fillColor("black");
                 }
-                doc.moveDown(1);
+                doc.moveDown(0.5);
             }
 
             if (data.symptoms) {
