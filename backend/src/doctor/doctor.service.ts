@@ -28,6 +28,10 @@ export class DoctorService implements IDoctorService {
         private shiftAssignmentRepo: Repository<ShiftAssignmentEntity>
     ) {}
 
+    listDoctors(): Promise<DoctorEntity[]> {
+        return this.doctorRepo.find();
+    }
+
     createDoctor(): Promise<DoctorEntity> {
         let newDoctor = {
             name: 'Test3',

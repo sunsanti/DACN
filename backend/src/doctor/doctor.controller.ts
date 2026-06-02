@@ -21,6 +21,11 @@ export class DoctorController{
         return this.doctorService.createDoctor();
     }
 
+    @Get('/list')
+    listDoctors(): Promise<DoctorEntity[]> {
+        return this.doctorService.listDoctors();
+    }
+
     @Get('/list-unAcpappointment')
     listUnaccpetAppointment(): Promise<AppointmentEntity[]> {
         return this.doctorService.listUnacceptedAppointment();
