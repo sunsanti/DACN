@@ -7,7 +7,7 @@ import {
     UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { ApiConsumes, ApiTags } from "@nestjs/swagger";
+import { ApiBody, ApiConsumes, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { AiService } from "./ai.service";
 import { ChatDTO } from "./dto/chat.dto";
@@ -20,6 +20,13 @@ export class AiController {
     /** Chẩn đoán ảnh: gửi 1 ảnh -> top-3 bệnh từ model Swin V2. */
     @Post("diagnose-image")
     @ApiConsumes("multipart/form-data")
+    @ApiBody({
+        schema: {
+            type: "object",
+            required: ["image"],
+            properties: { image: { type: "string", format: "binary" } },
+        },
+    })
     @UseInterceptors(FileInterceptor("image"))
     diagnoseImage(@UploadedFile() image: Express.Multer.File) {
         return this.aiService.diagnoseImage(image);
@@ -34,6 +41,15 @@ export class AiController {
     /** Tổng hợp ảnh + triệu chứng -> file PDF chẩn đoán sơ bộ gửi bác sĩ. */
     @Post("report")
     @ApiConsumes("multipart/form-data")
+    @ApiBody({
+        schema: {
+            type: "object",
+            properties: {
+                image: { type: "string", format: "binary" },
+                symptoms: { type: "string" },
+            },
+        },
+    })
     @UseInterceptors(FileInterceptor("image"))
     async report(
         @UploadedFile() image: Express.Multer.File,
