@@ -7,6 +7,7 @@ import '../models/appointment.dart';
 import '../providers/auth_provider.dart';
 import '../providers/doctor_provider.dart';
 import '../services/doctor_service.dart';
+import 'doctor_shifts_screen.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({super.key});
@@ -153,6 +154,14 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           title: const Text('Bác sĩ — Lịch hẹn'),
           actions: [
             IconButton(
+              tooltip: 'Ca trực',
+              icon: const Icon(Icons.schedule),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DoctorShiftsScreen()),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Đăng xuất',
               icon: const Icon(Icons.logout),
               onPressed: () => context.read<AuthProvider>().logout(),
             ),

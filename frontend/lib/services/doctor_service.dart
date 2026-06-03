@@ -2,8 +2,36 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import '../core/dio_client.dart';
 import '../models/appointment.dart';
+import '../models/shift.dart';
 
 class DoctorService {
+  // ---- shifts ----
+  Future<List<ShiftTemplate>> shiftTemplates() async {
+    final res = await DioClient.dio.get('/doctor/shift-templates');
+    return (res.data as List)
+        .map((e) => ShiftTemplate.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<List<ShiftAssignment>> myShifts() async {
+    final res = await DioClient.dio.get('/doctor/my-shifts');
+    return (res.data as List)
+        .map((e) => ShiftAssignment.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<void> registerShift(int shiftId) async {
+    await DioClient.dio.post('/doctor/register-shift', data: {'shiftId': shiftId});
+  }
+
+  Future<void> cancelAssignment(int id) async {
+    await DioClient.dio.post('/doctor/cancel-assignment/$id');
+  }
+
+  Future<void> deleteAssignment(int id) async {
+    await DioClient.dio.delete('/doctor/assignment/$id');
+  }
+
   Future<List<Appointment>> _list(String path) async {
     final res = await DioClient.dio.get(path);
     return (res.data as List)
