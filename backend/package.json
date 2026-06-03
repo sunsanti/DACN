@@ -8,7 +8,7 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start:dev": "concurrently -k -n AI,API -c magenta,green \"npm:start:ai\" \"npm:start:backend\"",
+    "start:dev": "concurrently -n AI,API -c magenta,green \"npm:start:ai\" \"npm:start:backend\"",
     "start:ai": "cd ../AI && .venv\\Scripts\\python -m uvicorn app:app --port 8000 --reload",
     "start:backend": "nest start --watch",
     "start:debug": "nest start --debug --watch",

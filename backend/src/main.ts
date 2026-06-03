@@ -19,6 +19,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(3000);
+  // Bind all IPv4 interfaces so the Android emulator (10.0.2.2) and LAN devices can reach it.
+  await app.listen(3000, '0.0.0.0');
 }
 bootstrap();
