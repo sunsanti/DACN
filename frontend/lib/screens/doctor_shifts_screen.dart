@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/dio_client.dart';
 import '../models/shift.dart';
 import '../services/doctor_service.dart';
+import 'shift_overview_screen.dart';
 
 class DoctorShiftsScreen extends StatefulWidget {
   const DoctorShiftsScreen({super.key});
@@ -62,10 +63,19 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
             .toList(),
       ),
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 90)),
+      helpText: 'Chọn ngày làm ca',
+    );
+    if (date == null) return;
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     try {
-      await _service.registerShift(picked.id);
-      _toast('Đã đăng ký ca ${picked.type == 'morning' ? 'sáng' : 'chiều'}');
+      await _service.registerShift(picked.id, dateStr);
+      _toast('Đã đăng ký ca ${picked.type == 'morning' ? 'sáng' : 'chiều'} ngày $dateStr');
       await _load();
     } catch (e) {
       _toast(DioClient.messageFrom(e));
@@ -95,7 +105,18 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ca trực của tôi')),
+      appBar: AppBar(
+        title: const Text('Ca trực của tôi'),
+        actions: [
+          IconButton(
+            tooltip: 'Tất cả ca trực',
+            icon: const Icon(Icons.groups),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ShiftOverviewScreen()),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _register,
         icon: const Icon(Icons.add),
@@ -128,8 +149,8 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
       child: ListTile(
         leading: Icon(s.type == 'morning' ? Icons.wb_sunny : Icons.wb_twilight,
             color: canceled ? Colors.grey : Colors.orange),
-        title: Text('Ca ${s.type == 'morning' ? 'sáng' : 'chiều'} — ${s.duration.toStringAsFixed(1)}h'),
-        subtitle: Text('Trạng thái: ${s.status}',
+        title: Text('Ca ${s.type == 'morning' ? 'sáng' : 'chiều'} — ${s.dateLabel}'),
+        subtitle: Text('${s.timeLabel} · ${s.duration.toStringAsFixed(1)}h · ${s.status}',
             style: TextStyle(color: s.isActive ? Colors.green : Colors.grey)),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

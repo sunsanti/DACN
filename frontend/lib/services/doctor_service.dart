@@ -20,8 +20,15 @@ class DoctorService {
         .toList();
   }
 
-  Future<void> registerShift(int shiftId) async {
-    await DioClient.dio.post('/doctor/register-shift', data: {'shiftId': shiftId});
+  Future<List<ShiftAssignment>> shiftOverview() async {
+    final res = await DioClient.dio.get('/doctor/shift-overview');
+    return (res.data as List)
+        .map((e) => ShiftAssignment.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<void> registerShift(int shiftId, String date) async {
+    await DioClient.dio.post('/doctor/register-shift', data: {'shiftId': shiftId, 'date': date});
   }
 
   Future<void> cancelAssignment(int id) async {

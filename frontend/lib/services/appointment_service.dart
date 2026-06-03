@@ -41,6 +41,15 @@ class AppointmentService {
         .toList();
   }
 
+  /// Free 30-min slots (as local DateTimes) for a doctor on a date (YYYY-MM-DD).
+  Future<List<DateTime>> availability(int doctorId, String date) async {
+    final res = await DioClient.dio.get('/doctor/availability',
+        queryParameters: {'doctorId': doctorId, 'date': date});
+    return (res.data as List)
+        .map((e) => DateTime.parse(e as String).toLocal())
+        .toList();
+  }
+
   Future<List<Appointment>> listMyAppointments() async {
     final res = await DioClient.dio.get('/patient/list-appointment');
     return (res.data as List)

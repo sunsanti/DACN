@@ -22,7 +22,12 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
   List<Doctor> _doctors = [];
   Doctor? _selectedDoctor;
   DateTime _date = DateTime.now().add(const Duration(days: 1));
-  TimeOfDay _time = const TimeOfDay(hour: 9, minute: 0);
+
+  List<DateTime> _slots = [];
+  DateTime? _selectedSlot;
+  bool _loadingSlots = false;
+  String? _slotError;
+
   bool _loadingDoctors = true;
   bool _submitting = false;
   String? _loadError;
@@ -40,6 +45,9 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
     super.dispose();
   }
 
+  String get _dateStr =>
+      '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}';
+
   Future<void> _loadDoctors() async {
     try {
       final docs = await _service.listDoctors();
@@ -48,6 +56,7 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
         _selectedDoctor = docs.isNotEmpty ? docs.first : null;
         _loadingDoctors = false;
       });
+      _loadSlots();
     } catch (e) {
       setState(() {
         _loadError = DioClient.messageFrom(e);
@@ -56,40 +65,59 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
     }
   }
 
-  DateTime get _apTime =>
-      DateTime(_date.year, _date.month, _date.day, _time.hour, _time.minute);
+  Future<void> _loadSlots() async {
+    if (_selectedDoctor == null) return;
+    setState(() {
+      _loadingSlots = true;
+      _slots = [];
+      _selectedSlot = null;
+      _slotError = null;
+    });
+    try {
+      final slots = await _service.availability(_selectedDoctor!.id, _dateStr);
+      setState(() => _slots = slots);
+    } catch (e) {
+      setState(() => _slotError = DioClient.messageFrom(e));
+    } finally {
+      if (mounted) setState(() => _loadingSlots = false);
+    }
+  }
+
+  String _hm(DateTime d) =>
+      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDoctor == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Chưa có bác sĩ để chọn')),
-      );
+      _toast('Chưa có bác sĩ để chọn');
+      return;
+    }
+    if (_selectedSlot == null) {
+      _toast('Hãy chọn một khung giờ trống');
       return;
     }
     setState(() => _submitting = true);
     try {
       await context.read<AppointmentProvider>().create(
-            apTime: _apTime,
+            apTime: _selectedSlot!,
             address: _address.text.trim(),
             doctorId: _selectedDoctor!.id,
             note: _note.text.trim(),
           );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đặt lịch thành công')),
-        );
+        _toast('Đặt lịch thành công');
         Navigator.of(context).pop();
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(DioClient.messageFrom(e))),
-        );
-      }
+      _toast(DioClient.messageFrom(e));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  void _toast(String m) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
   }
 
   @override
@@ -117,40 +145,34 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
                       items: _doctors
                           .map((d) => DropdownMenuItem(value: d, child: Text('BS. ${d.name} (#${d.id})')))
                           .toList(),
-                      onChanged: (d) => setState(() => _selectedDoctor = d),
+                      onChanged: (d) {
+                        setState(() => _selectedDoctor = d);
+                        _loadSlots();
+                      },
                       validator: (d) => d == null ? 'Chọn bác sĩ' : null,
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.calendar_today),
-                            label: Text('${_date.day}/${_date.month}/${_date.year}'),
-                            onPressed: () async {
-                              final p = await showDatePicker(
-                                context: context,
-                                initialDate: _date,
-                                firstDate: DateTime.now(),
-                                lastDate: DateTime.now().add(const Duration(days: 365)),
-                              );
-                              if (p != null) setState(() => _date = p);
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.access_time),
-                            label: Text(_time.format(context)),
-                            onPressed: () async {
-                              final p = await showTimePicker(context: context, initialTime: _time);
-                              if (p != null) setState(() => _time = p);
-                            },
-                          ),
-                        ),
-                      ],
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text('Ngày: ${_date.day}/${_date.month}/${_date.year}'),
+                      onPressed: () async {
+                        final p = await showDatePicker(
+                          context: context,
+                          initialDate: _date,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 90)),
+                        );
+                        if (p != null) {
+                          setState(() => _date = p);
+                          _loadSlots();
+                        }
+                      },
                     ),
+                    const SizedBox(height: 16),
+                    const Text('Khung giờ trống (theo ca trực của bác sĩ):',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    _slotsView(),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _address,
@@ -175,6 +197,34 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _slotsView() {
+    if (_loadingSlots) {
+      return const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator());
+    }
+    if (_slotError != null) {
+      return Text('Lỗi: $_slotError', style: const TextStyle(color: Colors.red));
+    }
+    if (_slots.isEmpty) {
+      return const Text(
+        'Bác sĩ chưa đăng ký ca trực ngày này (hoặc đã kín). '
+        'Hãy chọn ngày khác hoặc bác sĩ khác.',
+        style: TextStyle(color: Colors.grey),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _slots.map((s) {
+        final sel = _selectedSlot == s;
+        return ChoiceChip(
+          label: Text(_hm(s)),
+          selected: sel,
+          onSelected: (_) => setState(() => _selectedSlot = s),
+        );
+      }).toList(),
     );
   }
 }
