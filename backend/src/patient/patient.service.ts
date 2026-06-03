@@ -1,14 +1,12 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { IPatientService } from "./interfaces/patient_service.interface";
-import { PatientDTO } from "./dto/patient.dto";
-import { Patient } from "./interfaces/patient.interface";
-import { Appointment } from "./interfaces/appointment.interface";
 import { CreateAppoinmentDTO } from "./dto/create_appointment.dto";
+import { UpdateAppointmentDTO } from "./dto/update_appointment.dto";
+import { UpdatePatientDTO } from "./dto/update_patient.dto";
 import { InjectRepository } from "@nestjs/typeorm";
 import { AppointmentEntity } from "../patient/entities/appointment.entity";
 import { Repository } from "typeorm";
 import { PatientEntity } from "./entities/patient.entity";
-import { Doctor } from "src/doctor/interfaces/doctor.interface";
 import { DoctorEntity } from "src/doctor/entities/doctor.entity";
 
 @Injectable()
@@ -58,23 +56,58 @@ export class PatientService implements IPatientService {
         return this.patientRepo.save(newPatient);
     }
 
-    async deleteAppointment(id: number): Promise<void> {
+    /** Own profile. */
+    async getProfile(patientId: number): Promise<PatientEntity> {
+        const patient = await this.patientRepo.findOne({ where: { id: patientId } });
+        if (!patient) throw new NotFoundException('Không tìm thấy hồ sơ bệnh nhân');
+        return patient;
+    }
+
+    async updateProfile(patientId: number, dto: UpdatePatientDTO): Promise<PatientEntity> {
+        const patient = await this.getProfile(patientId);
+        Object.assign(patient, {
+            ...dto,
+            birthDate: dto.birthDate ? new Date(dto.birthDate) : patient.birthDate,
+        });
+        return this.patientRepo.save(patient);
+    }
+
+    /** Ensure the appointment belongs to this patient (prevent IDOR). */
+    private async assertOwns(patientId: number, appointmentId: number): Promise<AppointmentEntity> {
+        const appt = await this.appointmentRepo.findOne({
+            where: { id: appointmentId },
+            relations: ['patient', 'doctor'],
+        });
+        if (!appt) throw new NotFoundException('Lịch khám không tồn tại');
+        if (appt.patient?.id !== patientId) throw new ForbiddenException('Không phải lịch của bạn');
+        return appt;
+    }
+
+    async getAppointment(patientId: number, appointmentId: number): Promise<AppointmentEntity> {
+        return this.assertOwns(patientId, appointmentId);
+    }
+
+    async deleteAppointment(patientId: number, id: number): Promise<void> {
+        await this.assertOwns(patientId, id);
         await this.appointmentRepo.delete(id);
     }
 
-    editAppointment(appointmentId: number): Promise<Appointment> {
-        let newAppointment: Appointment = {
-            id: appointmentId,
-            apTime: new Date('2025-08-18'),
-            confirmDate: null,
-            address: 'dia chi bac si',
-            note: null,
-            confirmCondition: 1,
-            doctor: 'bac si Quy',
-            patientId: 1,
-            doctorId: 2
-        }
-        return Promise.resolve(newAppointment);
+    async editAppointment(patientId: number, appointmentId: number, dto: UpdateAppointmentDTO): Promise<AppointmentEntity> {
+        await this.assertOwns(patientId, appointmentId);
+        await this.appointmentRepo.update(
+            { id: appointmentId },
+            {
+                ...(dto.apTime ? { apTime: new Date(dto.apTime) } : {}),
+                ...(dto.address !== undefined ? { address: dto.address } : {}),
+                ...(dto.note !== undefined ? { note: dto.note } : {}),
+            },
+        );
+        const updated = await this.appointmentRepo.findOne({
+            where: { id: appointmentId },
+            relations: ['doctor'],
+        });
+        if (!updated) throw new NotFoundException('Lịch khám không tồn tại');
+        return updated;
     }
 
     async listAppointment(patientId: number): Promise<AppointmentEntity[]> {
@@ -84,6 +117,4 @@ export class PatientService implements IPatientService {
             order: { apTime: 'DESC' },
         });
     }
-    
-
 }
