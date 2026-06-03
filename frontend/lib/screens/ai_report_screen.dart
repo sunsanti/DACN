@@ -1,11 +1,9 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 
 import '../core/dio_client.dart';
+import '../core/pdf_opener.dart';
 import '../models/appointment.dart';
 import '../services/ai_service.dart';
 
@@ -22,9 +20,10 @@ class _AiReportScreenState extends State<AiReportScreen> {
   final _picker = ImagePicker();
   final _ai = AiService();
 
-  XFile? _image;
+  Uint8List? _imageBytes;
+  String _imageName = 'symptom.jpg';
   bool _submitting = false;
-  String? _savedPdfPath;
+  String? _resultMessage;
 
   @override
   void dispose() {
@@ -34,11 +33,17 @@ class _AiReportScreenState extends State<AiReportScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     final picked = await _picker.pickImage(source: source, maxWidth: 1280);
-    if (picked != null) setState(() => _image = picked);
+    if (picked != null) {
+      final bytes = await picked.readAsBytes(); // works on web + native
+      setState(() {
+        _imageBytes = bytes;
+        _imageName = picked.name;
+      });
+    }
   }
 
   Future<void> _submit() async {
-    if (_image == null) {
+    if (_imageBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Hãy chọn ảnh trước')),
       );
@@ -46,19 +51,18 @@ class _AiReportScreenState extends State<AiReportScreen> {
     }
     setState(() {
       _submitting = true;
-      _savedPdfPath = null;
+      _resultMessage = null;
     });
     try {
       final Uint8List pdf = await _ai.buildReport(
-        imagePath: _image!.path,
+        imageBytes: _imageBytes!,
+        filename: _imageName,
         symptoms: _symptoms.text.trim(),
         appointmentId: widget.appointment.id,
       );
-      final dir = await getTemporaryDirectory();
-      final path = '${dir.path}/ai-report-${widget.appointment.id}.pdf';
-      await File(path).writeAsBytes(pdf, flush: true);
-      setState(() => _savedPdfPath = path);
-      await OpenFilex.open(path);
+      final path = await openPdf(pdf, 'ai-report-${widget.appointment.id}.pdf');
+      setState(() => _resultMessage =
+          path != null ? 'Đã lưu & mở PDF: $path' : 'Đã mở PDF ở tab mới');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -81,10 +85,10 @@ class _AiReportScreenState extends State<AiReportScreen> {
           children: [
             Text('Bác sĩ: ${widget.appointment.doctorName}'),
             const SizedBox(height: 12),
-            if (_image != null)
+            if (_imageBytes != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.file(File(_image!.path), height: 200, fit: BoxFit.cover),
+                child: Image.memory(_imageBytes!, height: 200, fit: BoxFit.cover),
               )
             else
               Container(
@@ -133,14 +137,9 @@ class _AiReportScreenState extends State<AiReportScreen> {
                   : const Icon(Icons.smart_toy),
               label: Text(_submitting ? 'Đang phân tích...' : 'Gửi cho AI & tạo PDF'),
             ),
-            if (_savedPdfPath != null) ...[
+            if (_resultMessage != null) ...[
               const SizedBox(height: 16),
-              Text('Đã lưu PDF: $_savedPdfPath', style: const TextStyle(color: Colors.green)),
-              TextButton.icon(
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('Mở lại PDF'),
-                onPressed: () => OpenFilex.open(_savedPdfPath!),
-              ),
+              Text(_resultMessage!, style: const TextStyle(color: Colors.green)),
             ],
             const SizedBox(height: 8),
             const Text(

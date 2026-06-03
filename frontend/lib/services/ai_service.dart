@@ -3,15 +3,17 @@ import 'package:dio/dio.dart';
 import '../core/dio_client.dart';
 
 class AiService {
-  /// Sends the symptom image + text for an appointment and returns the PDF bytes.
-  /// Backend persists the report against the appointment (doctor can fetch later).
+  /// Sends the symptom image (bytes) + text for an appointment and returns the
+  /// PDF bytes. Works on web and native (no dart:io path). Backend persists the
+  /// report against the appointment so the doctor can fetch it later.
   Future<Uint8List> buildReport({
-    required String imagePath,
+    required Uint8List imageBytes,
+    required String filename,
     required String symptoms,
     required int appointmentId,
   }) async {
     final form = FormData.fromMap({
-      'image': await MultipartFile.fromFile(imagePath, filename: 'symptom.jpg'),
+      'image': MultipartFile.fromBytes(imageBytes, filename: filename),
       'symptoms': symptoms,
       'appointmentId': appointmentId,
     });
