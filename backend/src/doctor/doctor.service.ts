@@ -1,16 +1,13 @@
-import { Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { IDoctorService } from "./interfaces/doctor_service.interface";
-import { Appointment } from "src/patient/interfaces/appointment.interface";
-import { Shift } from "./interfaces/shift.interface";
 import { DoctorEntity } from "./entities/doctor.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DeepPartial, Repository } from "typeorm";
+import { Repository } from "typeorm";
 import { ShiftEntity } from "./entities/shift.entity";
 import { AppointmentEntity } from "../patient/entities/appointment.entity";
-import { ConfirmAppointmentDTO } from "./dto/confirm.dto";
 import { ShiftAssignmentEntity } from "./entities/shiftAssignment.entity";
-import { timeEnd } from "console";
 import { ShiftDTO } from "./dto/shift.dto";
+import { MedicalReportEntity } from "../patient/entities/medical_report.entity";
 
 @Injectable()
 export class DoctorService implements IDoctorService {
@@ -25,11 +22,33 @@ export class DoctorService implements IDoctorService {
         private appointmentRepo: Repository<AppointmentEntity>,
 
         @InjectRepository(ShiftAssignmentEntity)
-        private shiftAssignmentRepo: Repository<ShiftAssignmentEntity>
+        private shiftAssignmentRepo: Repository<ShiftAssignmentEntity>,
+
+        @InjectRepository(MedicalReportEntity)
+        private reportRepo: Repository<MedicalReportEntity>
     ) {}
 
     listDoctors(): Promise<DoctorEntity[]> {
         return this.doctorRepo.find();
+    }
+
+    /** Latest AI report PDF for an appointment (for the doctor to download). */
+    async getReport(appointmentId: number): Promise<Buffer | null> {
+        const report = await this.reportRepo.findOne({
+            where: { appointment: { id: appointmentId } },
+            order: { createdAt: "DESC" },
+        });
+        return report ? report.pdf : null;
+    }
+
+    private async assertOwns(doctorId: number, appointmentId: number): Promise<AppointmentEntity> {
+        const appt = await this.appointmentRepo.findOne({
+            where: { id: appointmentId },
+            relations: ["doctor"],
+        });
+        if (!appt) throw new NotFoundException("Lịch khám không tồn tại");
+        if (appt.doctor?.id !== doctorId) throw new ForbiddenException("Không phải lịch của bạn");
+        return appt;
     }
 
     createDoctor(): Promise<DoctorEntity> {
@@ -45,21 +64,22 @@ export class DoctorService implements IDoctorService {
         return this.doctorRepo.save(newDoctor)
     }
 
-    listUnacceptedAppointment(): Promise<AppointmentEntity[]> {
-        let confirmCondition = 1;
-        //show all the appointments with 0 condition in database
-
+    listUnacceptedAppointment(doctorId: number): Promise<AppointmentEntity[]> {
+        // confirmCondition 1 = chờ xác nhận (critical-constraints rule 3)
         return this.appointmentRepo.find({
-            where: {confirmCondition: 1}
-        })
+            where: { confirmCondition: 1, doctor: { id: doctorId } },
+            relations: ["patient"],
+            order: { apTime: "ASC" },
+        });
     }
 
-    listAcceptedAppointment(): Promise<AppointmentEntity[]> {
-        let confirmCondition = '1';
-        //show all the appointments with 1 condition
+    listAcceptedAppointment(doctorId: number): Promise<AppointmentEntity[]> {
+        // confirmCondition 0 = đã xác nhận
         return this.appointmentRepo.find({
-            where: {confirmCondition: 0}
-        })
+            where: { confirmCondition: 0, doctor: { id: doctorId } },
+            relations: ["patient"],
+            order: { apTime: "ASC" },
+        });
     }
 
     async listOfShifts(doctorId: number): Promise<ShiftAssignmentEntity[]> {
@@ -186,34 +206,30 @@ async addWorkingTime(
 
     }
 
-    async reAppointment(reAppointmentId: number, newApTime: Date, newConfirmTime: Date, newNote: string): Promise<AppointmentEntity> {
-        const newAppointment = await this.appointmentRepo.update(
-            {id: reAppointmentId},
+    async reAppointment(doctorId: number, reAppointmentId: number, newApTime: Date, newConfirmTime: Date, newNote: string): Promise<AppointmentEntity> {
+        await this.assertOwns(doctorId, reAppointmentId);
+        await this.appointmentRepo.update(
+            { id: reAppointmentId },
             { apTime: newApTime, confirmDate: newConfirmTime, note: newNote }
-        )
+        );
         const reAppointment = await this.appointmentRepo.findOne({
             where: { id: reAppointmentId }
-        })
-        if(!reAppointment) return Promise.resolve({} as AppointmentEntity);
-        //take the appointment with the id, and edit the new appointment
+        });
+        if (!reAppointment) throw new NotFoundException("Lịch khám không tồn tại");
         return reAppointment;
     }
 
-    async confirmAppointment(appointmentId: number, note: string, confirmDate: Date): Promise<AppointmentEntity> {
-        const updateAppointment = await this.appointmentRepo.update(
-            {id: appointmentId},
-            { note: note, confirmCondition: 0, confirmDate: confirmDate}
-        )
+    async confirmAppointment(doctorId: number, appointmentId: number, note: string, confirmDate: Date): Promise<AppointmentEntity> {
+        await this.assertOwns(doctorId, appointmentId);
+        await this.appointmentRepo.update(
+            { id: appointmentId },
+            { note: note, confirmCondition: 0, confirmDate: confirmDate } // 0 = đã xác nhận
+        );
         const confirmedAppointment = await this.appointmentRepo.findOne({
             where: { id: appointmentId }
-        })
-
-        if(!confirmedAppointment) return Promise.resolve({} as AppointmentEntity);
-
+        });
+        if (!confirmedAppointment) throw new NotFoundException("Lịch khám không tồn tại");
         return confirmedAppointment;
-
-        
-        
     }
 
     //remember to make the payment for the app, with the qr is ok
