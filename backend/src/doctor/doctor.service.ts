@@ -130,14 +130,19 @@ async addWorkingTime(
       endTime = canceled.endTime;
     }
 
+    // duration (giờ) của ca = endTime - startTime (cột duration là NOT NULL)
+    const end = new Date(endTime);
+    const duration = Math.max(0, (end.getTime() - now.getTime()) / 3_600_000);
+
     // 3. luôn CREATE NEW ROW
     const created = await this.shiftAssignmentRepo.save({
       doctor: { id: doctorId },
       shift: { id: shift.shiftId },
       status: 'ACTIVE',
       startTime: now,
-      endTime: endTime,
-      type: shift.type
+      endTime: end,
+      type: shift.type,
+      duration,
     });
 
     results.push(created);
@@ -170,40 +175,23 @@ async addWorkingTime(
     }
 
     async cancelShift(doctorId: number, shiftId: number): Promise<void> {
-        const time = new Date();
+        const now = new Date();
         const shift = await this.shiftAssignmentRepo.findOne({
             where: {
                 doctor: { id: doctorId },
                 shift: { id: shiftId }
             }
-        })
-        if(shift?.type == 'morning'){
-            const updateStatus = await this.shiftAssignmentRepo.update(
-            {
-                doctor: { id: doctorId },
-                shift: { id: shiftId }
-            },
-            {
-                status: 'CANCELED',
-                endTime: new Date(),
-                duration: 12 - time.getHours() + time.getMinutes()/60
-            }
-        )
-        } else {
-            const updateStatus = await this.shiftAssignmentRepo.update(
-            {
-                doctor: { id: doctorId },
-                shift: { id: shiftId }
-            },
-            {
-                status: 'CANCELED',
-                endTime: new Date(),
-                duration: 20 - time.getHours() + time.getMinutes()/60
-            }
-        )
-        }
-        
+        });
+        if (!shift) throw new NotFoundException("Không tìm thấy ca trực");
 
+        // Số giờ đã làm tính tới lúc huỷ = now - startTime (thay công thức cũ bị
+        // sai thứ tự toán tử: `12 - h + m/60`).
+        const worked = Math.max(0, (now.getTime() - new Date(shift.startTime).getTime()) / 3_600_000);
+
+        await this.shiftAssignmentRepo.update(
+            { doctor: { id: doctorId }, shift: { id: shiftId } },
+            { status: 'CANCELED', endTime: now, duration: Math.round(worked * 100) / 100 }
+        );
     }
 
     async reAppointment(doctorId: number, reAppointmentId: number, newApTime: Date, newConfirmTime: Date, newNote: string): Promise<AppointmentEntity> {
