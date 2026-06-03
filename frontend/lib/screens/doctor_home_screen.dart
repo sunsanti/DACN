@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/dio_client.dart';
 import '../core/pdf_opener.dart';
+import '../core/reason_dialog.dart';
 import '../models/appointment.dart';
 import '../providers/auth_provider.dart';
 import '../providers/doctor_provider.dart';
@@ -65,67 +66,14 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     }
   }
 
-  Future<void> _reschedule(Appointment a) async {
+  Future<void> _cancelByDoctor(Appointment a, String title) async {
     final provider = context.read<DoctorProvider>();
-    DateTime newDate = a.apTime;
-    TimeOfDay newTime = TimeOfDay.fromDateTime(a.apTime);
-    final noteCtrl = TextEditingController(text: a.note ?? '');
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          title: Text('Đổi lịch #${a.id}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () async {
-                        final p = await showDatePicker(
-                          context: ctx,
-                          initialDate: newDate,
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
-                        );
-                        if (p != null) setLocal(() => newDate = p);
-                      },
-                      child: Text('${newDate.day}/${newDate.month}/${newDate.year}'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () async {
-                        final p = await showTimePicker(context: ctx, initialTime: newTime);
-                        if (p != null) setLocal(() => newTime = p);
-                      },
-                      child: Text(newTime.format(ctx)),
-                    ),
-                  ),
-                ],
-              ),
-              TextField(controller: noteCtrl, decoration: const InputDecoration(labelText: 'Ghi chú')),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Huỷ')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Lưu')),
-          ],
-        ),
-      ),
-    );
-    if (ok != true) return;
-    final newApTime = DateTime(newDate.year, newDate.month, newDate.day, newTime.hour, newTime.minute);
+    final reason = await promptReason(context,
+        title: title, hint: 'Lý do (gửi cho bệnh nhân)', confirmLabel: 'Xác nhận');
+    if (reason == null) return;
     try {
-      await provider.reschedule(
-            a.id,
-            newApTime: newApTime,
-            newConfirmTime: DateTime.now(),
-            newNote: noteCtrl.text.trim(),
-          );
-      _toast('Đã đổi lịch #${a.id}');
+      await provider.cancelByDoctor(a.id, reason);
+      _toast('Đã gửi tới bệnh nhân');
     } catch (e) {
       _toast(DioClient.messageFrom(e));
     }
@@ -162,33 +110,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       final pdf = await _docService.downloadReport(a.id);
       final path = await openPdf(pdf, 'report-${a.id}.pdf');
       _toast(path != null ? 'Đã mở báo cáo' : 'Đã tải báo cáo (xem ở tab mới/Downloads)');
-    } catch (e) {
-      _toast(DioClient.messageFrom(e));
-    }
-  }
-
-  Future<void> _deleteAppt(Appointment a) async {
-    final provider = context.read<DoctorProvider>();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Xoá lịch #${a.id}?'),
-        content: const Text('Hành động này không thể hoàn tác.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Huỷ')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Xoá'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    try {
-      await _docService.deleteAppointment(a.id);
-      await provider.load();
-      _toast('Đã xoá lịch #${a.id}');
     } catch (e) {
       _toast(DioClient.messageFrom(e));
     }
@@ -297,20 +218,22 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                     ),
                   if (!a.isExamined)
                     OutlinedButton.icon(
-                      icon: const Icon(Icons.edit_calendar, size: 18),
-                      label: const Text('Đổi lịch'),
-                      onPressed: () => _reschedule(a),
+                      icon: const Icon(Icons.description, size: 18),
+                      label: const Text('Báo cáo AI'),
+                      onPressed: () => _openReport(a),
                     ),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.description, size: 18),
-                    label: const Text('Báo cáo AI'),
-                    onPressed: () => _openReport(a),
-                  ),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                    label: const Text('Xoá', style: TextStyle(color: Colors.red)),
-                    onPressed: () => _deleteAppt(a),
-                  ),
+                  if (a.isPending)
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.block, size: 18, color: Colors.red),
+                      label: const Text('Không nhận bệnh', style: TextStyle(color: Colors.red)),
+                      onPressed: () => _cancelByDoctor(a, 'Không nhận bệnh #${a.id}'),
+                    ),
+                  if (a.isConfirmed)
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.cancel, size: 18, color: Colors.red),
+                      label: const Text('Hủy lịch', style: TextStyle(color: Colors.red)),
+                      onPressed: () => _cancelByDoctor(a, 'Hủy lịch #${a.id}'),
+                    ),
                 ],
               ),
             ],

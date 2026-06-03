@@ -21,17 +21,17 @@ class AppointmentService {
     return Appointment.fromJson(Map<String, dynamic>.from(res.data));
   }
 
-  Future<void> editAppointment(int id,
-      {String? apTime, String? address, String? note}) async {
-    await DioClient.dio.put('/patient/edit-appointment/$id', data: {
-      if (apTime != null) 'apTime': apTime,
-      if (address != null) 'address': address,
+  /// Reschedule to a new slot (allowed once). Confirmed appts go back to pending.
+  Future<void> rescheduleAppointment(int id, {required String apTime, String? note}) async {
+    await DioClient.dio.put('/patient/reschedule-appointment/$id', data: {
+      'apTime': apTime,
       if (note != null) 'note': note,
     });
   }
 
-  Future<void> deleteAppointment(int id) async {
-    await DioClient.dio.delete('/patient/delete-appointment/$id');
+  /// Cancel (not delete) with a reason — the row is kept so the reason is visible.
+  Future<void> cancelAppointment(int id, String reason) async {
+    await DioClient.dio.post('/patient/cancel-appointment/$id', data: {'reason': reason});
   }
 
   Future<List<Doctor>> listDoctors() async {

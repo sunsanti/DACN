@@ -76,6 +76,11 @@ class DoctorService {
     await DioClient.dio.delete('/doctor/appointment/$appointmentId');
   }
 
+  /// Reject (pending) or cancel (confirmed) with a reason -> sent to the patient.
+  Future<void> cancelByDoctor(int appointmentId, String reason) async {
+    await DioClient.dio.post('/doctor/cancel-appointment/$appointmentId', data: {'reason': reason});
+  }
+
   Future<void> confirm(int appointmentId,
       {required String note, required DateTime confirmDate}) async {
     await DioClient.dio.post('/doctor/confirm-appointment/$appointmentId', data: {

@@ -103,17 +103,30 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           children: [
             Text('Địa chỉ: ${a.address}'),
             if (a.note != null && a.note!.isNotEmpty) Text('Ghi chú: ${a.note}'),
+            if (a.doctorNote != null && a.doctorNote!.isNotEmpty)
+              Text('BS: ${a.doctorNote}', style: const TextStyle(color: Colors.blue)),
             Text('Trạng thái: ${a.statusLabel}',
-                style: TextStyle(color: a.isConfirmed ? Colors.green : Colors.orange)),
+                style: TextStyle(
+                    color: a.isCanceled
+                        ? Colors.red
+                        : a.isConfirmed
+                            ? Colors.green
+                            : a.isExamined
+                                ? Colors.blue
+                                : Colors.orange)),
+            if (a.isCanceled && a.cancelReason != null)
+              Text('Lý do hủy: ${a.cancelReason}', style: const TextStyle(color: Colors.red, fontSize: 12)),
           ],
         ),
-        trailing: IconButton(
-          tooltip: 'Gửi ảnh + triệu chứng cho AI',
-          icon: const Icon(Icons.smart_toy),
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => AiReportScreen(appointment: a)),
-          ),
-        ),
+        trailing: a.isCanceled
+            ? null
+            : IconButton(
+                tooltip: 'Gửi ảnh + triệu chứng cho AI',
+                icon: const Icon(Icons.smart_toy),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => AiReportScreen(appointment: a)),
+                ),
+              ),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => AppointmentDetailScreen(appointmentId: a.id)),
         ),

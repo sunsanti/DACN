@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/dio_client.dart';
+import '../core/reason_dialog.dart';
 import '../models/appointment.dart';
 import '../providers/doctor_provider.dart';
 import '../services/doctor_service.dart';
@@ -77,7 +78,8 @@ class _State extends State<DoctorAppointmentDetailScreen> {
         const Text('Thông tin lịch hẹn', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         _row('Thời gian', _fmt(a.apTime)),
         _row('Địa chỉ', a.address),
-        _row('Ghi chú', (a.note == null || a.note!.isEmpty) ? '—' : a.note!),
+        _row('Ghi chú BN', (a.note == null || a.note!.isEmpty) ? '—' : a.note!),
+        _row('Ghi chú của tôi', (a.doctorNote == null || a.doctorNote!.isEmpty) ? '—' : a.doctorNote!),
         _row('Trạng thái', a.statusLabel),
         const Divider(height: 28),
         const Text('Thông tin bệnh nhân', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -85,14 +87,31 @@ class _State extends State<DoctorAppointmentDetailScreen> {
         _row('Tuổi', a.patientAge.toString()),
         _row('SĐT', a.patientPhone.isEmpty ? '—' : a.patientPhone),
         _row('Địa chỉ', a.patientAddress.isEmpty ? '—' : a.patientAddress),
+        if (a.isCanceled) ...[
+          const Divider(height: 28),
+          _row('Lý do hủy', a.cancelReason ?? ''),
+          _row('Người hủy', a.canceledByDoctor ? 'Bạn (bác sĩ)' : 'Bệnh nhân'),
+        ],
         const SizedBox(height: 20),
         Wrap(spacing: 8, runSpacing: 8, children: [
-          if (a.isConfirmed)
+          if (a.isPending)
+            OutlinedButton.icon(
+              icon: const Icon(Icons.block, color: Colors.red),
+              label: const Text('Không nhận bệnh', style: TextStyle(color: Colors.red)),
+              onPressed: () => _cancel('Không nhận bệnh #${a.id}'),
+            ),
+          if (a.isConfirmed) ...[
             FilledButton.icon(
               icon: const Icon(Icons.task_alt),
               label: const Text('Đã khám xong'),
               onPressed: _complete,
             ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.cancel, color: Colors.red),
+              label: const Text('Hủy lịch', style: TextStyle(color: Colors.red)),
+              onPressed: () => _cancel('Hủy lịch #${a.id}'),
+            ),
+          ],
           if (a.isExamined && a.patientId != null)
             OutlinedButton.icon(
               icon: const Icon(Icons.event_repeat),
@@ -110,6 +129,20 @@ class _State extends State<DoctorAppointmentDetailScreen> {
         ]),
       ],
     );
+  }
+
+  Future<void> _cancel(String title) async {
+    final provider = context.read<DoctorProvider>();
+    final reason = await promptReason(context,
+        title: title, hint: 'Lý do (gửi cho bệnh nhân)', confirmLabel: 'Xác nhận');
+    if (reason == null) return;
+    try {
+      await provider.cancelByDoctor(widget.appointmentId, reason);
+      _toast('Đã gửi tới bệnh nhân');
+      await _load();
+    } catch (e) {
+      _toast(DioClient.messageFrom(e));
+    }
   }
 
   Widget _row(String k, String v) => Padding(

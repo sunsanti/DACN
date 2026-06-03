@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/dio_client.dart';
+import '../core/reason_dialog.dart';
 import '../models/appointment.dart';
 import '../providers/appointment_provider.dart';
 import '../services/appointment_service.dart';
 import 'ai_report_screen.dart';
+import 'create_appointment_screen.dart';
 
 class AppointmentDetailScreen extends StatefulWidget {
   final int appointmentId;
@@ -42,107 +44,76 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} '
       '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
-  Future<void> _edit() async {
-    final a = _appt!;
-    if (a.isConfirmed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lịch đã xác nhận — không sửa được')),
-      );
-      return;
-    }
-    DateTime date = a.apTime;
-    TimeOfDay time = TimeOfDay.fromDateTime(a.apTime);
-    final addr = TextEditingController(text: a.address);
-    final note = TextEditingController(text: a.note ?? '');
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Sửa lịch khám'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () async {
-                        final p = await showDatePicker(
-                            context: ctx, initialDate: date,
-                            firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
-                        if (p != null) setLocal(() => date = p);
-                      },
-                      child: Text('${date.day}/${date.month}/${date.year}'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () async {
-                        final p = await showTimePicker(context: ctx, initialTime: time);
-                        if (p != null) setLocal(() => time = p);
-                      },
-                      child: Text(time.format(ctx)),
-                    ),
-                  ),
-                ]),
-                TextField(controller: addr, decoration: const InputDecoration(labelText: 'Địa chỉ')),
-                TextField(controller: note, decoration: const InputDecoration(labelText: 'Ghi chú')),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Huỷ')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Lưu')),
-          ],
-        ),
-      ),
-    );
-    if (ok != true) return;
-    final newApTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    try {
-      await _service.editAppointment(a.id,
-          apTime: newApTime.toUtc().toIso8601String(), address: addr.text.trim(), note: note.text.trim());
-      if (mounted) context.read<AppointmentProvider>().load();
-      await _load();
-      _toast('Đã cập nhật lịch');
-    } catch (e) {
-      _toast(DioClient.messageFrom(e));
-    }
-  }
-
-  Future<void> _delete() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Xoá lịch khám?'),
-        content: const Text('Hành động này không thể hoàn tác.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Huỷ')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Xoá'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    try {
-      await _service.deleteAppointment(widget.appointmentId);
-      if (mounted) {
-        context.read<AppointmentProvider>().load();
-        Navigator.of(context).pop();
-        _toast('Đã xoá lịch');
-      }
-    } catch (e) {
-      _toast(DioClient.messageFrom(e));
-    }
-  }
-
   void _toast(String m) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  }
+
+  Future<void> _reschedule(Appointment a) async {
+    if (a.doctorId == null) return;
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 90)),
+      helpText: 'Chọn ngày khám mới',
+    );
+    if (date == null || !mounted) return;
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    List<DateTime> slots;
+    try {
+      slots = await _service.availability(a.doctorId!, dateStr);
+    } catch (e) {
+      _toast(DioClient.messageFrom(e));
+      return;
+    }
+    if (!mounted) return;
+    if (slots.isEmpty) {
+      _toast('Bác sĩ chưa có khung trống ngày này');
+      return;
+    }
+    final slot = await showDialog<DateTime>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Chọn khung giờ mới'),
+        children: slots
+            .map((s) => SimpleDialogOption(
+                  onPressed: () => Navigator.pop(ctx, s),
+                  child: Text(
+                      '${s.day}/${s.month} — ${s.hour.toString().padLeft(2, '0')}:${s.minute.toString().padLeft(2, '0')}'),
+                ))
+            .toList(),
+      ),
+    );
+    if (slot == null) return;
+    try {
+      await _service.rescheduleAppointment(a.id, apTime: slot.toUtc().toIso8601String());
+      if (mounted) context.read<AppointmentProvider>().load();
+      await _load();
+      _toast('Đã đổi lịch (chờ bác sĩ xác nhận lại)');
+    } catch (e) {
+      _toast(DioClient.messageFrom(e));
+    }
+  }
+
+  Future<void> _cancel(Appointment a) async {
+    final reason = await promptReason(context,
+        title: 'Hủy lịch #${a.id}', hint: 'Lý do hủy', confirmLabel: 'Hủy lịch');
+    if (reason == null) return;
+    try {
+      await _service.cancelAppointment(a.id, reason);
+      if (mounted) context.read<AppointmentProvider>().load();
+      await _load();
+      _toast('Đã hủy lịch');
+    } catch (e) {
+      _toast(DioClient.messageFrom(e));
+    }
+  }
+
+  void _rebook(Appointment a) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => CreateAppointmentScreen(preselectDoctorId: a.doctorId),
+    ));
   }
 
   @override
@@ -164,39 +135,62 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         _row('Thời gian', _fmt(a.apTime)),
         _row('Bác sĩ', a.doctorName),
         _row('Địa chỉ', a.address),
-        _row('Ghi chú', (a.note == null || a.note!.isEmpty) ? '—' : a.note!),
         _row('Trạng thái', a.statusLabel),
+        const Divider(height: 24),
+        _row('Ghi chú của bạn', (a.note == null || a.note!.isEmpty) ? '—' : a.note!),
+        _row('Ghi chú bác sĩ', (a.doctorNote == null || a.doctorNote!.isEmpty) ? '—' : a.doctorNote!),
+        if (a.isCanceled) ...[
+          const Divider(height: 24),
+          _row('Lý do hủy', a.cancelReason ?? '',
+              valueColor: Colors.red),
+          _row('Người hủy', a.canceledByDoctor ? 'Bác sĩ' : 'Bạn'),
+        ],
         const SizedBox(height: 20),
         Wrap(spacing: 8, runSpacing: 8, children: [
-          FilledButton.tonalIcon(
-            icon: const Icon(Icons.smart_toy),
-            label: const Text('Gửi AI'),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => AiReportScreen(appointment: a)),
+          if (!a.isCanceled && !a.isExamined)
+            FilledButton.tonalIcon(
+              icon: const Icon(Icons.smart_toy),
+              label: const Text('Gửi AI'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => AiReportScreen(appointment: a)),
+              ),
             ),
-          ),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.edit),
-            label: const Text('Sửa'),
-            onPressed: _edit,
-          ),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            label: const Text('Xoá', style: TextStyle(color: Colors.red)),
-            onPressed: _delete,
-          ),
+          if (a.canReschedule)
+            OutlinedButton.icon(
+              icon: const Icon(Icons.edit_calendar),
+              label: const Text('Đổi lịch'),
+              onPressed: () => _reschedule(a),
+            ),
+          if (!a.isCanceled && !a.isExamined)
+            OutlinedButton.icon(
+              icon: const Icon(Icons.cancel, color: Colors.red),
+              label: const Text('Hủy lịch', style: TextStyle(color: Colors.red)),
+              onPressed: () => _cancel(a),
+            ),
+          if (a.isCanceled && a.canceledByDoctor && a.doctorId != null)
+            FilledButton.icon(
+              icon: const Icon(Icons.event_available),
+              label: const Text('Đặt lại với bác sĩ này'),
+              onPressed: () => _rebook(a),
+            ),
         ]),
+        if (a.rescheduled && !a.isCanceled)
+          const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text('Đã dùng 1 lần đổi lịch — chỉ có thể hủy.',
+                style: TextStyle(color: Colors.grey, fontSize: 12)),
+          ),
       ],
     );
   }
 
-  Widget _row(String k, String v) => Padding(
+  Widget _row(String k, String v, {Color? valueColor}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: 110, child: Text(k, style: const TextStyle(fontWeight: FontWeight.bold))),
-            Expanded(child: Text(v)),
+            SizedBox(width: 120, child: Text(k, style: const TextStyle(fontWeight: FontWeight.bold))),
+            Expanded(child: Text(v, style: TextStyle(color: valueColor))),
           ],
         ),
       );

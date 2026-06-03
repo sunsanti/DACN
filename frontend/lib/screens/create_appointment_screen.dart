@@ -7,7 +7,8 @@ import '../providers/appointment_provider.dart';
 import '../services/appointment_service.dart';
 
 class CreateAppointmentScreen extends StatefulWidget {
-  const CreateAppointmentScreen({super.key});
+  final int? preselectDoctorId;
+  const CreateAppointmentScreen({super.key, this.preselectDoctorId});
 
   @override
   State<CreateAppointmentScreen> createState() => _CreateAppointmentScreenState();
@@ -51,9 +52,18 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
   Future<void> _loadDoctors() async {
     try {
       final docs = await _service.listDoctors();
+      Doctor? initial = docs.isNotEmpty ? docs.first : null;
+      if (widget.preselectDoctorId != null) {
+        for (final d in docs) {
+          if (d.id == widget.preselectDoctorId) {
+            initial = d;
+            break;
+          }
+        }
+      }
       setState(() {
         _doctors = docs;
-        _selectedDoctor = docs.isNotEmpty ? docs.first : null;
+        _selectedDoctor = initial;
         _loadingDoctors = false;
       });
       _loadSlots();

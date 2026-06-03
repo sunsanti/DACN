@@ -48,6 +48,11 @@ class DoctorProvider extends ChangeNotifier {
     await load();
   }
 
+  Future<void> cancelByDoctor(int id, String reason) async {
+    await _service.cancelByDoctor(id, reason);
+    await load();
+  }
+
   Future<void> reExamination(
       {required int patientId,
       required String apTime,
@@ -58,12 +63,4 @@ class DoctorProvider extends ChangeNotifier {
     await load();
   }
 
-  Future<void> reschedule(int id,
-      {required DateTime newApTime,
-      required DateTime newConfirmTime,
-      required String newNote}) async {
-    await _service.reschedule(id,
-        newApTime: newApTime, newConfirmTime: newConfirmTime, newNote: newNote);
-    await load();
-  }
 }
