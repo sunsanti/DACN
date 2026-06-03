@@ -6,6 +6,8 @@ import '../providers/appointment_provider.dart';
 import '../providers/auth_provider.dart';
 import 'create_appointment_screen.dart';
 import 'ai_report_screen.dart';
+import 'appointment_detail_screen.dart';
+import 'profile_screen.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -31,6 +33,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       appBar: AppBar(
         title: const Text('Lịch khám của tôi'),
         actions: [
+          IconButton(
+            tooltip: 'Hồ sơ',
+            icon: const Icon(Icons.person),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+          ),
           IconButton(
             tooltip: 'Đăng xuất',
             icon: const Icon(Icons.logout),
@@ -104,6 +113,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => AiReportScreen(appointment: a)),
           ),
+        ),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => AppointmentDetailScreen(appointmentId: a.id)),
         ),
       ),
     );
