@@ -25,7 +25,7 @@ export class ShiftAssignmentEntity {
     @Column()
     status: 'ACTIVE' | 'CANCELED' | 'REPLACED';
 
-    @Column()
+    @Column({ type: 'double precision' })
     duration: number;
 
 }

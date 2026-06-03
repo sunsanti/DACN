@@ -32,6 +32,67 @@ export class DoctorService implements IDoctorService {
         return this.doctorRepo.find();
     }
 
+    // ---- shift management (clean API used by the doctor app) ----
+
+    /** Available shift slot templates (morning/afternoon). */
+    listShiftTemplates(): Promise<ShiftEntity[]> {
+        return this.shiftRepo.find({ order: { startTime: "ASC" } });
+    }
+
+    /** Register the logged-in doctor for a shift template -> ACTIVE assignment. */
+    async registerShift(doctorId: number, shiftId: number): Promise<ShiftAssignmentEntity> {
+        const template = await this.shiftRepo.findOne({ where: { id: shiftId } });
+        if (!template) throw new NotFoundException("Mẫu ca trực không tồn tại");
+        const start = new Date(template.startTime);
+        const end = new Date(template.endTime);
+        const duration = Math.max(0, (end.getTime() - start.getTime()) / 3_600_000);
+        return this.shiftAssignmentRepo.save({
+            doctor: { id: doctorId } as DoctorEntity,
+            shift: { id: shiftId } as ShiftEntity,
+            type: template.type,
+            startTime: start,
+            endTime: end,
+            status: "ACTIVE",
+            duration: Math.round(duration * 100) / 100,
+        });
+    }
+
+    /** Shift assignments of the logged-in doctor. */
+    myShifts(doctorId: number): Promise<ShiftAssignmentEntity[]> {
+        return this.shiftAssignmentRepo.find({
+            where: { doctor: { id: doctorId } },
+            order: { startTime: "DESC" },
+        });
+    }
+
+    private async assertOwnsAssignment(doctorId: number, assignmentId: number): Promise<ShiftAssignmentEntity> {
+        const a = await this.shiftAssignmentRepo.findOne({
+            where: { id: assignmentId },
+            relations: ["doctor"],
+        });
+        if (!a) throw new NotFoundException("Không tìm thấy ca trực");
+        if (a.doctor?.id !== doctorId) throw new ForbiddenException("Không phải ca của bạn");
+        return a;
+    }
+
+    /** Cancel an assignment by its id (no longer counts toward salary). */
+    async cancelAssignment(doctorId: number, assignmentId: number): Promise<ShiftAssignmentEntity> {
+        await this.assertOwnsAssignment(doctorId, assignmentId);
+        await this.shiftAssignmentRepo.update(assignmentId, {
+            status: "CANCELED",
+            endTime: new Date(),
+            duration: 0,
+        });
+        const updated = await this.shiftAssignmentRepo.findOne({ where: { id: assignmentId } });
+        if (!updated) throw new NotFoundException("Không tìm thấy ca trực");
+        return updated;
+    }
+
+    async deleteAssignment(doctorId: number, assignmentId: number): Promise<void> {
+        await this.assertOwnsAssignment(doctorId, assignmentId);
+        await this.shiftAssignmentRepo.delete(assignmentId);
+    }
+
     /** Latest AI report PDF for an appointment (for the doctor to download). */
     async getReport(appointmentId: number): Promise<Buffer | null> {
         const report = await this.reportRepo.findOne({

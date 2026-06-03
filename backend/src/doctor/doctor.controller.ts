@@ -108,6 +108,38 @@ export class DoctorController {
         return this.doctorService.listOfShifts(user.doctorId!);
     }
 
+    // ---- clean shift API used by the doctor app ----
+
+    @Roles('doctor')
+    @Get('/shift-templates')
+    shiftTemplates() {
+        return this.doctorService.listShiftTemplates();
+    }
+
+    @Roles('doctor')
+    @Get('/my-shifts')
+    myShifts(@CurrentUser() user: JwtPayload) {
+        return this.doctorService.myShifts(user.doctorId!);
+    }
+
+    @Roles('doctor')
+    @Post('/register-shift')
+    registerShift(@CurrentUser() user: JwtPayload, @Body('shiftId', ParseIntPipe) shiftId: number) {
+        return this.doctorService.registerShift(user.doctorId!, shiftId);
+    }
+
+    @Roles('doctor')
+    @Post('/cancel-assignment/:id')
+    cancelAssignment(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
+        return this.doctorService.cancelAssignment(user.doctorId!, id);
+    }
+
+    @Roles('doctor')
+    @Delete('/assignment/:id')
+    deleteAssignment(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
+        return this.doctorService.deleteAssignment(user.doctorId!, id);
+    }
+
     @Roles('doctor')
     @Post('/cancel-shift')
     cancelShift(@CurrentUser() user: JwtPayload, @Body() body: CancelShiftDto): Promise<void> {

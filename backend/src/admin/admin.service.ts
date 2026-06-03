@@ -38,7 +38,7 @@ export class AdminService {
         const hoursByDoctor = new Map<number, number>();
         for (const a of assignments) {
             const docId = a.doctor?.id;
-            if (!docId || !a.startTime || !a.endTime) continue;
+            if (!docId || a.status !== "ACTIVE" || !a.startTime || !a.endTime) continue;
             const hours = (new Date(a.endTime).getTime() - new Date(a.startTime).getTime()) / 3_600_000;
             if (hours > 0) {
                 hoursByDoctor.set(docId, (hoursByDoctor.get(docId) ?? 0) + hours);
