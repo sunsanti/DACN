@@ -7,6 +7,7 @@ import { ShiftEntity } from "./entities/shift.entity";
 import { AppointmentEntity } from "../patient/entities/appointment.entity";
 import { ShiftAssignmentEntity } from "./entities/shiftAssignment.entity";
 import { ShiftDTO } from "./dto/shift.dto";
+import { UpdateDoctorDTO } from "./dto/update-doctor.dto";
 import { MedicalReportEntity } from "../patient/entities/medical_report.entity";
 
 @Injectable()
@@ -30,6 +31,21 @@ export class DoctorService implements IDoctorService {
 
     listDoctors(): Promise<DoctorEntity[]> {
         return this.doctorRepo.find();
+    }
+
+    async getDoctor(id: number): Promise<DoctorEntity> {
+        const doctor = await this.doctorRepo.findOne({ where: { id } });
+        if (!doctor) throw new NotFoundException("Bác sĩ không tồn tại");
+        return doctor;
+    }
+
+    async updateDoctor(id: number, dto: UpdateDoctorDTO): Promise<DoctorEntity> {
+        const doctor = await this.getDoctor(id);
+        Object.assign(doctor, {
+            ...dto,
+            dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : doctor.dateOfBirth,
+        });
+        return this.doctorRepo.save(doctor);
     }
 
     // ---- shift management (clean API used by the doctor app) ----

@@ -18,6 +18,8 @@ import { AppointmentEntity } from "src/patient/entities/appointment.entity";
 import { ConfirmAppointmentDTO } from "./dto/confirm.dto";
 import { ReAppointmentDTO } from "./dto/RA.dto";
 import { ShiftListDTO } from "./dto/shiftList.dto";
+import { UpdateDoctorDTO } from "./dto/update-doctor.dto";
+import { Put } from "@nestjs/common";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import type { JwtPayload } from "../auth/jwt-payload.interface";
@@ -38,6 +40,20 @@ export class DoctorController {
     @Get('/list')
     listDoctors(): Promise<DoctorEntity[]> {
         return this.doctorService.listDoctors();
+    }
+
+    // ---- admin: view / edit a doctor ----
+
+    @Roles('admin')
+    @Get('/detail/:id')
+    getDoctor(@Param('id', ParseIntPipe) id: number) {
+        return this.doctorService.getDoctor(id);
+    }
+
+    @Roles('admin')
+    @Put('/update/:id')
+    updateDoctor(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateDoctorDTO) {
+        return this.doctorService.updateDoctor(id, dto);
     }
 
     // --- doctor-only: appointments assigned to the logged-in doctor ---
