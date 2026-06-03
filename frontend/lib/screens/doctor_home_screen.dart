@@ -8,6 +8,8 @@ import '../providers/auth_provider.dart';
 import '../providers/doctor_provider.dart';
 import '../services/doctor_service.dart';
 import 'doctor_shifts_screen.dart';
+import 'doctor_appointment_detail_screen.dart';
+import 're_examination_screen.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({super.key});
@@ -129,6 +131,32 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     }
   }
 
+  Future<void> _complete(Appointment a) async {
+    final provider = context.read<DoctorProvider>();
+    try {
+      await provider.complete(a.id);
+      _toast('Đã đánh dấu khám xong lịch #${a.id}');
+    } catch (e) {
+      _toast(DioClient.messageFrom(e));
+    }
+  }
+
+  Future<void> _reExam(Appointment a) async {
+    if (a.patientId == null) {
+      _toast('Thiếu thông tin bệnh nhân');
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReExaminationScreen(
+          patientId: a.patientId!,
+          patientName: a.patientName,
+          defaultAddress: a.address,
+        ),
+      ),
+    );
+  }
+
   Future<void> _openReport(Appointment a) async {
     try {
       final pdf = await _docService.downloadReport(a.id);
@@ -175,7 +203,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<DoctorProvider>();
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Bác sĩ — Lịch hẹn'),
@@ -193,24 +221,29 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               onPressed: () => context.read<AuthProvider>().logout(),
             ),
           ],
-          bottom: TabBar(tabs: [
-            Tab(text: 'Chờ xác nhận (${provider.pending.length})'),
+          bottom: TabBar(isScrollable: true, tabs: [
+            Tab(text: 'Chờ (${provider.pending.length})'),
             Tab(text: 'Đã xác nhận (${provider.confirmed.length})'),
+            Tab(text: 'Đã khám (${provider.completed.length})'),
           ]),
         ),
-        body: provider.loading && provider.pending.isEmpty && provider.confirmed.isEmpty
+        body: provider.loading &&
+                provider.pending.isEmpty &&
+                provider.confirmed.isEmpty &&
+                provider.completed.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : TabBarView(
                 children: [
-                  _list(provider.pending, pending: true),
-                  _list(provider.confirmed, pending: false),
+                  _list(provider.pending),
+                  _list(provider.confirmed),
+                  _list(provider.completed),
                 ],
               ),
       ),
     );
   }
 
-  Widget _list(List<Appointment> items, {required bool pending}) {
+  Widget _list(List<Appointment> items) {
     return RefreshIndicator(
       onRefresh: () => context.read<DoctorProvider>().load(),
       child: items.isEmpty
@@ -219,51 +252,69 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               padding: const EdgeInsets.all(12),
               itemCount: items.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, i) => _tile(items[i], pending: pending),
+              itemBuilder: (_, i) => _tile(items[i]),
             ),
     );
   }
 
-  Widget _tile(Appointment a, {required bool pending}) {
+  Widget _tile(Appointment a) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Lịch #${a.id} — ${_fmt(a.apTime)}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text('Bệnh nhân: ${a.patientName}'),
-            Text('Địa chỉ: ${a.address}'),
-            if (a.note != null && a.note!.isNotEmpty) Text('Ghi chú: ${a.note}'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                if (pending)
-                  FilledButton.tonalIcon(
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Xác nhận'),
-                    onPressed: () => _confirm(a),
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => DoctorAppointmentDetailScreen(appointmentId: a.id)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Lịch #${a.id} — ${_fmt(a.apTime)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('Bệnh nhân: ${a.patientName}'),
+              Text('Địa chỉ: ${a.address}'),
+              if (a.note != null && a.note!.isNotEmpty) Text('Ghi chú: ${a.note}'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  if (a.isPending)
+                    FilledButton.tonalIcon(
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('Xác nhận'),
+                      onPressed: () => _confirm(a),
+                    ),
+                  if (a.isConfirmed)
+                    FilledButton.tonalIcon(
+                      icon: const Icon(Icons.task_alt, size: 18),
+                      label: const Text('Đã khám xong'),
+                      onPressed: () => _complete(a),
+                    ),
+                  if (a.isExamined)
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.event_repeat, size: 18),
+                      label: const Text('Tái khám'),
+                      onPressed: () => _reExam(a),
+                    ),
+                  if (!a.isExamined)
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.edit_calendar, size: 18),
+                      label: const Text('Đổi lịch'),
+                      onPressed: () => _reschedule(a),
+                    ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.description, size: 18),
+                    label: const Text('Báo cáo AI'),
+                    onPressed: () => _openReport(a),
                   ),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.edit_calendar, size: 18),
-                  label: const Text('Đổi lịch'),
-                  onPressed: () => _reschedule(a),
-                ),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.description, size: 18),
-                  label: const Text('Báo cáo AI'),
-                  onPressed: () => _openReport(a),
-                ),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                  label: const Text('Xoá', style: TextStyle(color: Colors.red)),
-                  onPressed: () => _deleteAppt(a),
-                ),
-              ],
-            ),
-          ],
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                    label: const Text('Xoá', style: TextStyle(color: Colors.red)),
+                    onPressed: () => _deleteAppt(a),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

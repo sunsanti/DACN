@@ -41,6 +41,29 @@ class DoctorService {
 
   Future<List<Appointment>> listUnconfirmed() => _list('/doctor/list-unAcpappointment');
   Future<List<Appointment>> listConfirmed() => _list('/doctor/list-appointment');
+  Future<List<Appointment>> listCompleted() => _list('/doctor/list-completed');
+
+  Future<Appointment> getDetail(int id) async {
+    final res = await DioClient.dio.get('/doctor/appointment/$id');
+    return Appointment.fromJson(Map<String, dynamic>.from(res.data));
+  }
+
+  Future<void> complete(int id) async {
+    await DioClient.dio.post('/doctor/complete/$id');
+  }
+
+  Future<void> reExamination(
+      {required int patientId,
+      required String apTime,
+      required String address,
+      String? note}) async {
+    await DioClient.dio.post('/doctor/re-examination', data: {
+      'patientId': patientId,
+      'apTime': apTime,
+      'address': address,
+      if (note != null && note.isNotEmpty) 'note': note,
+    });
+  }
 
   Future<void> deleteAppointment(int appointmentId) async {
     await DioClient.dio.delete('/doctor/appointment/$appointmentId');
