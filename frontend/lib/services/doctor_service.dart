@@ -81,22 +81,23 @@ class DoctorService {
     await DioClient.dio.post('/doctor/cancel-appointment/$appointmentId', data: {'reason': reason});
   }
 
+  /// Doctor moves a confirmed appointment to a new free slot (once).
+  Future<void> reschedule(int appointmentId, String apTime) async {
+    await DioClient.dio.put('/doctor/reschedule-appointment/$appointmentId', data: {'apTime': apTime});
+  }
+
+  /// Free 30-min slots of a doctor on a date (for the doctor to pick a new slot).
+  Future<List<DateTime>> availability(int doctorId, String date) async {
+    final res = await DioClient.dio
+        .get('/doctor/availability', queryParameters: {'doctorId': doctorId, 'date': date});
+    return (res.data as List).map((e) => DateTime.parse(e as String).toLocal()).toList();
+  }
+
   Future<void> confirm(int appointmentId,
       {required String note, required DateTime confirmDate}) async {
     await DioClient.dio.post('/doctor/confirm-appointment/$appointmentId', data: {
       'note': note,
       'confirmDate': confirmDate.toUtc().toIso8601String(),
-    });
-  }
-
-  Future<void> reschedule(int appointmentId,
-      {required DateTime newApTime,
-      required DateTime newConfirmTime,
-      required String newNote}) async {
-    await DioClient.dio.post('/doctor/reAppointment/$appointmentId', data: {
-      'newApTime': newApTime.toUtc().toIso8601String(),
-      'newConfirmTime': newConfirmTime.toUtc().toIso8601String(),
-      'newNote': newNote,
     });
   }
 

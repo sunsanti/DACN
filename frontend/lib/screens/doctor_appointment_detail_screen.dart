@@ -106,6 +106,12 @@ class _State extends State<DoctorAppointmentDetailScreen> {
               label: const Text('Đã khám xong'),
               onPressed: _complete,
             ),
+            if (a.canReschedule)
+              OutlinedButton.icon(
+                icon: const Icon(Icons.edit_calendar),
+                label: const Text('Dời lịch'),
+                onPressed: () => _reschedule(a),
+              ),
             OutlinedButton.icon(
               icon: const Icon(Icons.cancel, color: Colors.red),
               label: const Text('Hủy lịch', style: TextStyle(color: Colors.red)),
@@ -139,6 +145,54 @@ class _State extends State<DoctorAppointmentDetailScreen> {
     try {
       await provider.cancelByDoctor(widget.appointmentId, reason);
       _toast('Đã gửi tới bệnh nhân');
+      await _load();
+    } catch (e) {
+      _toast(DioClient.messageFrom(e));
+    }
+  }
+
+  Future<void> _reschedule(Appointment a) async {
+    if (a.doctorId == null) return;
+    final provider = context.read<DoctorProvider>();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 90)),
+      helpText: 'Chọn ngày dời lịch',
+    );
+    if (date == null || !mounted) return;
+    final dateStr =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    List<DateTime> slots;
+    try {
+      slots = await _service.availability(a.doctorId!, dateStr);
+    } catch (e) {
+      _toast(DioClient.messageFrom(e));
+      return;
+    }
+    if (!mounted) return;
+    if (slots.isEmpty) {
+      _toast('Bạn chưa có khung trống ngày này');
+      return;
+    }
+    final slot = await showDialog<DateTime>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Chọn khung giờ mới'),
+        children: slots
+            .map((s) => SimpleDialogOption(
+                  onPressed: () => Navigator.pop(ctx, s),
+                  child: Text(
+                      '${s.day}/${s.month} — ${s.hour.toString().padLeft(2, '0')}:${s.minute.toString().padLeft(2, '0')}'),
+                ))
+            .toList(),
+      ),
+    );
+    if (slot == null) return;
+    try {
+      await provider.reschedule(widget.appointmentId, slot.toUtc().toIso8601String());
+      _toast('Đã dời lịch');
       await _load();
     } catch (e) {
       _toast(DioClient.messageFrom(e));

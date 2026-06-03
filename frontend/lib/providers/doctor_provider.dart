@@ -53,6 +53,11 @@ class DoctorProvider extends ChangeNotifier {
     await load();
   }
 
+  Future<void> reschedule(int id, String apTime) async {
+    await _service.reschedule(id, apTime);
+    await load();
+  }
+
   Future<void> reExamination(
       {required int patientId,
       required String apTime,

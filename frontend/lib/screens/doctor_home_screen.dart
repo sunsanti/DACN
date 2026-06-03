@@ -79,6 +79,53 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     }
   }
 
+  Future<void> _rescheduleDoctor(Appointment a) async {
+    if (a.doctorId == null) return;
+    final provider = context.read<DoctorProvider>();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 90)),
+      helpText: 'Chọn ngày dời lịch',
+    );
+    if (date == null || !mounted) return;
+    final dateStr =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    List<DateTime> slots;
+    try {
+      slots = await _docService.availability(a.doctorId!, dateStr);
+    } catch (e) {
+      _toast(DioClient.messageFrom(e));
+      return;
+    }
+    if (!mounted) return;
+    if (slots.isEmpty) {
+      _toast('Bạn chưa có khung trống ngày này (đăng ký ca trước)');
+      return;
+    }
+    final slot = await showDialog<DateTime>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Chọn khung giờ mới'),
+        children: slots
+            .map((s) => SimpleDialogOption(
+                  onPressed: () => Navigator.pop(ctx, s),
+                  child: Text(
+                      '${s.day}/${s.month} — ${s.hour.toString().padLeft(2, '0')}:${s.minute.toString().padLeft(2, '0')}'),
+                ))
+            .toList(),
+      ),
+    );
+    if (slot == null) return;
+    try {
+      await provider.reschedule(a.id, slot.toUtc().toIso8601String());
+      _toast('Đã dời lịch #${a.id}');
+    } catch (e) {
+      _toast(DioClient.messageFrom(e));
+    }
+  }
+
   Future<void> _complete(Appointment a) async {
     final provider = context.read<DoctorProvider>();
     try {
@@ -209,6 +256,12 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                       icon: const Icon(Icons.task_alt, size: 18),
                       label: const Text('Đã khám xong'),
                       onPressed: () => _complete(a),
+                    ),
+                  if (a.isConfirmed && a.canReschedule)
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.edit_calendar, size: 18),
+                      label: const Text('Dời lịch'),
+                      onPressed: () => _rescheduleDoctor(a),
                     ),
                   if (a.isExamined)
                     OutlinedButton.icon(
