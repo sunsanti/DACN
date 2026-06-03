@@ -5,6 +5,7 @@ import '../models/doctor_salary.dart';
 import '../providers/admin_provider.dart';
 import '../providers/auth_provider.dart';
 import 'add_doctor_screen.dart';
+import 'admin_doctor_detail_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -91,6 +92,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         subtitle: Text('Số giờ làm: ${s.totalHours}h  ·  ${_money(s.hourlyRate)}/giờ'),
         trailing: Text(_money(s.salary),
             style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => AdminDoctorDetailScreen(doctorId: s.doctorId)),
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import '../core/dio_client.dart';
 import '../models/doctor_salary.dart';
+import '../models/doctor_detail.dart';
 
 class AdminService {
   Future<List<DoctorSalary>> doctorSalaries() async {
@@ -7,6 +8,15 @@ class AdminService {
     return (res.data as List)
         .map((e) => DoctorSalary.fromJson(Map<String, dynamic>.from(e)))
         .toList();
+  }
+
+  Future<DoctorDetail> getDoctor(int id) async {
+    final res = await DioClient.dio.get('/doctor/detail/$id');
+    return DoctorDetail.fromJson(Map<String, dynamic>.from(res.data));
+  }
+
+  Future<void> updateDoctor(int id, Map<String, dynamic> body) async {
+    await DioClient.dio.put('/doctor/update/$id', data: body);
   }
 
   /// Admin creates a doctor account (reuses /auth/register-doctor).
