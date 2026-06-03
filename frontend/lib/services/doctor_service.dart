@@ -42,6 +42,10 @@ class DoctorService {
   Future<List<Appointment>> listUnconfirmed() => _list('/doctor/list-unAcpappointment');
   Future<List<Appointment>> listConfirmed() => _list('/doctor/list-appointment');
 
+  Future<void> deleteAppointment(int appointmentId) async {
+    await DioClient.dio.delete('/doctor/appointment/$appointmentId');
+  }
+
   Future<void> confirm(int appointmentId,
       {required String note, required DateTime confirmDate}) async {
     await DioClient.dio.post('/doctor/confirm-appointment/$appointmentId', data: {

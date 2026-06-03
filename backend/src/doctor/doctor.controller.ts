@@ -93,6 +93,12 @@ export class DoctorController {
             user.doctorId!, reAppointmentId, newApTime, newConfirmTime, newNote);
     }
 
+    @Roles('doctor')
+    @Delete('/appointment/:id')
+    deleteAppointment(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
+        return this.doctorService.deleteAppointment(user.doctorId!, id);
+    }
+
     /** Download the AI report PDF a patient generated for an appointment. */
     @Roles('doctor')
     @Get('/report/:appointmentId')

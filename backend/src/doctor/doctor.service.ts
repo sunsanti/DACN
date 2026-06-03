@@ -271,6 +271,11 @@ async addWorkingTime(
         );
     }
 
+    async deleteAppointment(doctorId: number, appointmentId: number): Promise<void> {
+        await this.assertOwns(doctorId, appointmentId);
+        await this.appointmentRepo.delete(appointmentId);
+    }
+
     async reAppointment(doctorId: number, reAppointmentId: number, newApTime: Date, newConfirmTime: Date, newNote: string): Promise<AppointmentEntity> {
         await this.assertOwns(doctorId, reAppointmentId);
         await this.appointmentRepo.update(

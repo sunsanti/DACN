@@ -139,6 +139,33 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     }
   }
 
+  Future<void> _deleteAppt(Appointment a) async {
+    final provider = context.read<DoctorProvider>();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Xoá lịch #${a.id}?'),
+        content: const Text('Hành động này không thể hoàn tác.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Huỷ')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xoá'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _docService.deleteAppointment(a.id);
+      await provider.load();
+      _toast('Đã xoá lịch #${a.id}');
+    } catch (e) {
+      _toast(DioClient.messageFrom(e));
+    }
+  }
+
   void _toast(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -228,6 +255,11 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                   icon: const Icon(Icons.description, size: 18),
                   label: const Text('Báo cáo AI'),
                   onPressed: () => _openReport(a),
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                  label: const Text('Xoá', style: TextStyle(color: Colors.red)),
+                  onPressed: () => _deleteAppt(a),
                 ),
               ],
             ),
