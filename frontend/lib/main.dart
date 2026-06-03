@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
 import 'providers/appointment_provider.dart';
+import 'providers/doctor_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/patient_home_screen.dart';
+import 'screens/doctor_home_screen.dart';
 
 void main() {
   runApp(
@@ -12,6 +14,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
+        ChangeNotifierProvider(create: (_) => DoctorProvider()),
       ],
       child: const DacnApp(),
     ),
@@ -52,7 +55,10 @@ class AuthGate extends StatelessWidget {
     if (auth.role == 'patient') {
       return const PatientHomeScreen();
     }
-    // Doctor/Admin UIs are a later slice.
+    if (auth.role == 'doctor') {
+      return const DoctorHomeScreen();
+    }
+    // Admin UI is a later slice.
     return _RolePlaceholder(role: auth.role ?? '');
   }
 }

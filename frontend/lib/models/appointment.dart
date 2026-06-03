@@ -5,6 +5,7 @@ class Appointment {
   final String? note;
   final int confirmCondition; // 1 = chờ xác nhận, 0 = đã xác nhận
   final String doctorName;
+  final String patientName;
 
   Appointment({
     required this.id,
@@ -13,6 +14,7 @@ class Appointment {
     required this.note,
     required this.confirmCondition,
     required this.doctorName,
+    required this.patientName,
   });
 
   bool get isConfirmed => confirmCondition == 0;
@@ -20,6 +22,7 @@ class Appointment {
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
     final doctor = json['doctor'];
+    final patient = json['patient'];
     return Appointment(
       id: json['id'] as int,
       apTime: DateTime.parse(json['apTime'] as String).toLocal(),
@@ -29,6 +32,7 @@ class Appointment {
       doctorName: (json['doctorName'] ??
           (doctor is Map ? doctor['name'] : null) ??
           '') as String,
+      patientName: (patient is Map ? patient['name'] : null) ?? '',
     );
   }
 }
