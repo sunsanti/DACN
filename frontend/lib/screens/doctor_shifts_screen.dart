@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/dio_client.dart';
+import '../core/shift_ui.dart';
 import '../models/shift.dart';
 import '../services/doctor_service.dart';
 import 'shift_overview_screen.dart';
@@ -57,7 +58,7 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
         children: templates
             .map((t) => SimpleDialogOption(
                   onPressed: () => Navigator.pop(ctx, t),
-                  child: Text('${t.type == 'morning' ? 'Sáng' : 'Chiều'} '
+                  child: Text('${t.typeLabel} '
                       '(${t.hours.toStringAsFixed(0)}h)'),
                 ))
             .toList(),
@@ -75,7 +76,7 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     try {
       await _service.registerShift(picked.id, dateStr);
-      _toast('Đã đăng ký ca ${picked.type == 'morning' ? 'sáng' : 'chiều'} ngày $dateStr');
+      _toast('Đã đăng ký ca ${picked.typeLabel} ngày $dateStr');
       await _load();
     } catch (e) {
       _toast(DioClient.messageFrom(e));
@@ -147,9 +148,9 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
     final canceled = !s.isActive;
     return Card(
       child: ListTile(
-        leading: Icon(s.type == 'morning' ? Icons.wb_sunny : Icons.wb_twilight,
+        leading: Icon(shiftIcon(s.type),
             color: canceled ? Colors.grey : Colors.orange),
-        title: Text('Ca ${s.type == 'morning' ? 'sáng' : 'chiều'} — ${s.dateLabel}'),
+        title: Text('Ca ${s.typeLabel} — ${s.dateLabel}'),
         subtitle: Text('${s.timeLabel} · ${s.duration.toStringAsFixed(1)}h · ${s.status}',
             style: TextStyle(color: s.isActive ? Colors.green : Colors.grey)),
         trailing: Row(

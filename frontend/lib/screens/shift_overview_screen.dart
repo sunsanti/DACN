@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/dio_client.dart';
+import '../core/shift_ui.dart';
 import '../models/shift.dart';
 import '../services/doctor_service.dart';
 
@@ -55,11 +56,10 @@ class _ShiftOverviewScreenState extends State<ShiftOverviewScreen> {
                           final s = _shifts[i];
                           return Card(
                             child: ListTile(
-                              leading: Icon(s.type == 'morning' ? Icons.wb_sunny : Icons.wb_twilight,
-                                  color: Colors.orange),
+                              leading: Icon(shiftIcon(s.type), color: Colors.orange),
                               title: Text('BS. ${s.doctorName} — ${s.dateLabel}'),
                               subtitle: Text(
-                                  'Ca ${s.type == 'morning' ? 'sáng' : 'chiều'} · ${s.timeLabel} · ${s.duration.toStringAsFixed(1)}h'),
+                                  'Ca ${s.typeLabel} · ${s.timeLabel} · ${s.duration.toStringAsFixed(1)}h'),
                             ),
                           );
                         },

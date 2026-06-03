@@ -1,3 +1,17 @@
+/// Maps a shift type code to a Vietnamese label.
+String shiftTypeLabel(String type) {
+  switch (type) {
+    case 'morning':
+      return 'Sáng';
+    case 'afternoon':
+      return 'Chiều';
+    case 'evening':
+      return 'Tối';
+    default:
+      return type;
+  }
+}
+
 class ShiftTemplate {
   final int id;
   final String type;
@@ -11,6 +25,7 @@ class ShiftTemplate {
     required this.endTime,
   });
 
+  String get typeLabel => shiftTypeLabel(type);
   double get hours => endTime.difference(startTime).inMinutes / 60.0;
 
   factory ShiftTemplate.fromJson(Map<String, dynamic> json) => ShiftTemplate(
@@ -41,6 +56,7 @@ class ShiftAssignment {
   });
 
   bool get isActive => status == 'ACTIVE';
+  String get typeLabel => shiftTypeLabel(type);
 
   String get dateLabel =>
       '${startTime.day.toString().padLeft(2, '0')}/${startTime.month.toString().padLeft(2, '0')}/${startTime.year}';
