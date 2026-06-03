@@ -12,6 +12,8 @@ import type { Response } from "express";
 import { AiService } from "./ai.service";
 import { ChatDTO } from "./dto/chat.dto";
 import { Roles } from "../common/decorators/roles.decorator";
+import { CurrentUser } from "../common/decorators/current-user.decorator";
+import type { JwtPayload } from "../auth/jwt-payload.interface";
 
 @ApiTags("ai")
 @ApiBearerAuth()
@@ -56,6 +58,7 @@ export class AiController {
     })
     @UseInterceptors(FileInterceptor("image"))
     async report(
+        @CurrentUser() user: JwtPayload,
         @UploadedFile() image: Express.Multer.File,
         @Body("symptoms") symptoms: string,
         @Body("appointmentId") appointmentId: string,
@@ -65,6 +68,7 @@ export class AiController {
             image,
             symptoms,
             appointmentId ? Number(appointmentId) : undefined,
+            user.patientId,
         );
         res.set({
             "Content-Type": "application/pdf",

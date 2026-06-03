@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from "@nestjs/common";
+import { ForbiddenException, HttpException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
@@ -26,6 +26,8 @@ export class AiService {
         private readonly config: ConfigService,
         @InjectRepository(MedicalReportEntity)
         private readonly reportRepo: Repository<MedicalReportEntity>,
+        @InjectRepository(AppointmentEntity)
+        private readonly appointmentRepo: Repository<AppointmentEntity>,
     ) {
         this.baseUrl =
             this.config.get<string>("AI_SERVICE_URL") ?? "http://localhost:8000";
@@ -58,7 +60,21 @@ export class AiService {
         file: Express.Multer.File | undefined,
         symptoms?: string,
         appointmentId?: number,
+        patientId?: number,
     ): Promise<Buffer> {
+        // Verify the appointment belongs to the requesting patient BEFORE doing any
+        // work, so a patient cannot attach a report to someone else's appointment.
+        if (appointmentId) {
+            const appt = await this.appointmentRepo.findOne({
+                where: { id: appointmentId },
+                relations: ["patient"],
+            });
+            if (!appt) throw new NotFoundException("Lịch khám không tồn tại");
+            if (patientId && appt.patient?.id !== patientId) {
+                throw new ForbiddenException("Lịch khám không thuộc về bạn");
+            }
+        }
+
         const image = file ? await this.diagnoseImage(file) : null;
         const chat = symptoms?.trim() ? await this.chat(symptoms.trim()) : null;
         const pdf = await this.renderPdf({
