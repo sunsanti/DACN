@@ -8,6 +8,7 @@ import { DoctorModule } from './doctor/doctor.module';
 import { DatabaseModule } from './database/database.module';
 import { AiModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
+import { AdminModule } from './admin/admin.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -19,6 +20,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     DoctorModule,
     DatabaseModule,
     AiModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
