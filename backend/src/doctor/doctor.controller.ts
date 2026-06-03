@@ -21,6 +21,7 @@ import { ShiftListDTO } from "./dto/shiftList.dto";
 import { UpdateDoctorDTO } from "./dto/update-doctor.dto";
 import { ReExaminationDTO } from "./dto/reExamination.dto";
 import { RegisterShiftDTO } from "./dto/registerShift.dto";
+import { CancelDTO } from "../patient/dto/cancel.dto";
 import { Put, Query } from "@nestjs/common";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -124,6 +125,17 @@ export class DoctorController {
     @Delete('/appointment/:id')
     deleteAppointment(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
         return this.doctorService.deleteAppointment(user.doctorId!, id);
+    }
+
+    /** Reject (pending) or cancel (confirmed) an appointment with a reason → sent to patient. */
+    @Roles('doctor')
+    @Post('/cancel-appointment/:id')
+    cancelByDoctor(
+        @CurrentUser() user: JwtPayload,
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: CancelDTO,
+    ) {
+        return this.doctorService.cancelByDoctor(user.doctorId!, id, dto.reason);
     }
 
     /** Download the AI report PDF a patient generated for an appointment. */

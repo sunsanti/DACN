@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { IDoctorService } from "./interfaces/doctor_service.interface";
 import { DoctorEntity } from "./entities/doctor.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Between, Repository } from "typeorm";
+import { Between, IsNull, Repository } from "typeorm";
 import { ShiftEntity } from "./entities/shift.entity";
 import { AppointmentEntity } from "../patient/entities/appointment.entity";
 import { PatientEntity } from "../patient/entities/patient.entity";
@@ -105,7 +105,8 @@ export class DoctorService implements IDoctorService {
             where: { doctor: { id: doctorId }, status: "ACTIVE", startTime: Between(dayStart, dayEnd) },
         });
         const appts = await this.appointmentRepo.find({
-            where: { doctor: { id: doctorId }, apTime: Between(dayStart, dayEnd) },
+            // canceled appointments free up their slot again
+            where: { doctor: { id: doctorId }, apTime: Between(dayStart, dayEnd), cancelReason: IsNull() },
         });
         const apptMs = appts.map((a) => new Date(a.apTime).getTime());
         const taken = (slotMs: number) =>
@@ -206,10 +207,25 @@ export class DoctorService implements IDoctorService {
     /** Appointments already examined by this doctor (confirmCondition 2). */
     listCompletedAppointment(doctorId: number): Promise<AppointmentEntity[]> {
         return this.appointmentRepo.find({
-            where: { confirmCondition: 2, doctor: { id: doctorId } },
+            where: { confirmCondition: 2, doctor: { id: doctorId }, cancelReason: IsNull() },
             relations: ["patient"],
             order: { apTime: "DESC" },
         });
+    }
+
+    /** Doctor cancels/rejects an appointment with a reason (sent to the patient). */
+    async cancelByDoctor(doctorId: number, appointmentId: number, reason: string): Promise<AppointmentEntity> {
+        await this.assertOwns(doctorId, appointmentId);
+        await this.appointmentRepo.update(
+            { id: appointmentId },
+            { cancelReason: reason, canceledBy: "doctor" },
+        );
+        const updated = await this.appointmentRepo.findOne({
+            where: { id: appointmentId },
+            relations: ["patient"],
+        });
+        if (!updated) throw new NotFoundException("Lịch khám không tồn tại");
+        return updated;
     }
 
     /** Follow-up: the doctor creates a NEW (already-confirmed) appointment for a patient. */
@@ -251,9 +267,9 @@ export class DoctorService implements IDoctorService {
     }
 
     listUnacceptedAppointment(doctorId: number): Promise<AppointmentEntity[]> {
-        // confirmCondition 1 = chờ xác nhận (critical-constraints rule 3)
+        // confirmCondition 1 = chờ xác nhận (critical-constraints rule 3); bỏ lịch đã hủy
         return this.appointmentRepo.find({
-            where: { confirmCondition: 1, doctor: { id: doctorId } },
+            where: { confirmCondition: 1, doctor: { id: doctorId }, cancelReason: IsNull() },
             relations: ["patient"],
             order: { apTime: "ASC" },
         });
@@ -262,7 +278,7 @@ export class DoctorService implements IDoctorService {
     listAcceptedAppointment(doctorId: number): Promise<AppointmentEntity[]> {
         // confirmCondition 0 = đã xác nhận
         return this.appointmentRepo.find({
-            where: { confirmCondition: 0, doctor: { id: doctorId } },
+            where: { confirmCondition: 0, doctor: { id: doctorId }, cancelReason: IsNull() },
             relations: ["patient"],
             order: { apTime: "ASC" },
         });
@@ -402,7 +418,8 @@ async addWorkingTime(
         await this.assertOwns(doctorId, appointmentId);
         await this.appointmentRepo.update(
             { id: appointmentId },
-            { note: note, confirmCondition: 0, confirmDate: confirmDate } // 0 = đã xác nhận
+            // doctorNote is the doctor's note (does NOT override the patient's note)
+            { doctorNote: note ?? null, confirmCondition: 0, confirmDate: confirmDate } // 0 = đã xác nhận
         );
         const confirmedAppointment = await this.appointmentRepo.findOne({
             where: { id: appointmentId }

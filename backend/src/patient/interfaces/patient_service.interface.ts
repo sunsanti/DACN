@@ -10,7 +10,7 @@ export interface IPatientService {
     getProfile(patientId: number): Promise<PatientEntity>;
     updateProfile(patientId: number, dto: UpdatePatientDTO): Promise<PatientEntity>;
     getAppointment(patientId: number, appointmentId: number): Promise<AppointmentEntity>;
-    deleteAppointment(patientId: number, id: number): Promise<void>;
-    editAppointment(patientId: number, appointmentId: number, dto: UpdateAppointmentDTO): Promise<AppointmentEntity>;
+    cancelAppointment(patientId: number, id: number, reason: string): Promise<AppointmentEntity>;
+    rescheduleAppointment(patientId: number, appointmentId: number, dto: UpdateAppointmentDTO): Promise<AppointmentEntity>;
     listAppointment(patientId: number): Promise<AppointmentEntity[]>;
 }

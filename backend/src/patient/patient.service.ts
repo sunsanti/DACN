@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { IPatientService } from "./interfaces/patient_service.interface";
 import { CreateAppoinmentDTO } from "./dto/create_appointment.dto";
 import { UpdateAppointmentDTO } from "./dto/update_appointment.dto";
@@ -87,30 +87,43 @@ export class PatientService implements IPatientService {
         return this.assertOwns(patientId, appointmentId);
     }
 
-    async deleteAppointment(patientId: number, id: number): Promise<void> {
-        await this.assertOwns(patientId, id);
-        await this.appointmentRepo.delete(id);
+    /** Cancel (not delete) with a reason — keeps the row so the doctor sees it. */
+    async cancelAppointment(patientId: number, id: number, reason: string): Promise<AppointmentEntity> {
+        const appt = await this.assertOwns(patientId, id);
+        if (appt.cancelReason) throw new BadRequestException('Lịch đã bị hủy');
+        await this.appointmentRepo.update(
+            { id },
+            { cancelReason: reason, canceledBy: 'patient' },
+        );
+        return this.getAppointment(patientId, id);
     }
 
-    async editAppointment(patientId: number, appointmentId: number, dto: UpdateAppointmentDTO): Promise<AppointmentEntity> {
-        await this.assertOwns(patientId, appointmentId);
+    /**
+     * Reschedule to a new slot — allowed ONCE. If the appointment was already
+     * confirmed, it goes back to pending so the doctor re-confirms the new time.
+     */
+    async rescheduleAppointment(patientId: number, appointmentId: number, dto: UpdateAppointmentDTO): Promise<AppointmentEntity> {
+        const appt = await this.assertOwns(patientId, appointmentId);
+        if (appt.cancelReason) throw new BadRequestException('Lịch đã bị hủy');
+        if (appt.rescheduled) throw new BadRequestException('Lịch chỉ được đổi 1 lần — chỉ có thể hủy');
+        if (appt.confirmCondition === 2) throw new BadRequestException('Lịch đã khám xong');
+        if (!dto.apTime) throw new BadRequestException('Thiếu khung giờ mới');
+
         await this.appointmentRepo.update(
             { id: appointmentId },
             {
-                ...(dto.apTime ? { apTime: new Date(dto.apTime) } : {}),
-                ...(dto.address !== undefined ? { address: dto.address } : {}),
+                apTime: new Date(dto.apTime),
                 ...(dto.note !== undefined ? { note: dto.note } : {}),
+                confirmCondition: 1, // back to pending (doctor must re-confirm)
+                confirmDate: null,
+                rescheduled: true,
             },
         );
-        const updated = await this.appointmentRepo.findOne({
-            where: { id: appointmentId },
-            relations: ['doctor'],
-        });
-        if (!updated) throw new NotFoundException('Lịch khám không tồn tại');
-        return updated;
+        return this.getAppointment(patientId, appointmentId);
     }
 
     async listAppointment(patientId: number): Promise<AppointmentEntity[]> {
+        // Includes canceled ones so the patient can see the cancel reason.
         return this.appointmentRepo.find({
             where: { patient: { id: patientId } },
             relations: ['doctor'],
