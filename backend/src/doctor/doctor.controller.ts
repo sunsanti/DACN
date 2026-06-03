@@ -20,7 +20,8 @@ import { ReAppointmentDTO } from "./dto/RA.dto";
 import { ShiftListDTO } from "./dto/shiftList.dto";
 import { UpdateDoctorDTO } from "./dto/update-doctor.dto";
 import { ReExaminationDTO } from "./dto/reExamination.dto";
-import { Put } from "@nestjs/common";
+import { RegisterShiftDTO } from "./dto/registerShift.dto";
+import { Put, Query } from "@nestjs/common";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import type { JwtPayload } from "../auth/jwt-payload.interface";
@@ -170,10 +171,26 @@ export class DoctorController {
         return this.doctorService.myShifts(user.doctorId!);
     }
 
+    /** Overview of all registered shifts (which doctor works which window). */
+    @Roles('doctor', 'admin')
+    @Get('/shift-overview')
+    shiftOverview() {
+        return this.doctorService.shiftOverview();
+    }
+
+    /** Free 30-min slots of a doctor on a date (open to any authenticated user for booking). */
+    @Get('/availability')
+    availability(
+        @Query('doctorId', ParseIntPipe) doctorId: number,
+        @Query('date') date: string,
+    ) {
+        return this.doctorService.availability(doctorId, date);
+    }
+
     @Roles('doctor')
     @Post('/register-shift')
-    registerShift(@CurrentUser() user: JwtPayload, @Body('shiftId', ParseIntPipe) shiftId: number) {
-        return this.doctorService.registerShift(user.doctorId!, shiftId);
+    registerShift(@CurrentUser() user: JwtPayload, @Body() dto: RegisterShiftDTO) {
+        return this.doctorService.registerShift(user.doctorId!, dto.shiftId, dto.date);
     }
 
     @Roles('doctor')

@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { IDoctorService } from "./interfaces/doctor_service.interface";
 import { DoctorEntity } from "./entities/doctor.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Between, Repository } from "typeorm";
 import { ShiftEntity } from "./entities/shift.entity";
 import { AppointmentEntity } from "../patient/entities/appointment.entity";
 import { PatientEntity } from "../patient/entities/patient.entity";
@@ -56,13 +56,21 @@ export class DoctorService implements IDoctorService {
         return this.shiftRepo.find({ order: { startTime: "ASC" } });
     }
 
-    /** Register the logged-in doctor for a shift template -> ACTIVE assignment. */
-    async registerShift(doctorId: number, shiftId: number): Promise<ShiftAssignmentEntity> {
+    /**
+     * Register the doctor for a shift template on a REAL date.
+     * The template gives the time-of-day; `dateStr` (YYYY-MM-DD) gives the day.
+     */
+    async registerShift(doctorId: number, shiftId: number, dateStr: string): Promise<ShiftAssignmentEntity> {
         const template = await this.shiftRepo.findOne({ where: { id: shiftId } });
         if (!template) throw new NotFoundException("Mẫu ca trực không tồn tại");
-        const start = new Date(template.startTime);
-        const end = new Date(template.endTime);
+
+        const tStart = new Date(template.startTime);
+        const tEnd = new Date(template.endTime);
+        const [y, m, d] = dateStr.split("-").map(Number);
+        const start = new Date(y, m - 1, d, tStart.getHours(), tStart.getMinutes(), 0, 0);
+        const end = new Date(y, m - 1, d, tEnd.getHours(), tEnd.getMinutes(), 0, 0);
         const duration = Math.max(0, (end.getTime() - start.getTime()) / 3_600_000);
+
         return this.shiftAssignmentRepo.save({
             doctor: { id: doctorId } as DoctorEntity,
             shift: { id: shiftId } as ShiftEntity,
@@ -72,6 +80,47 @@ export class DoctorService implements IDoctorService {
             status: "ACTIVE",
             duration: Math.round(duration * 100) / 100,
         });
+    }
+
+    /** All registered shifts (overview): who works which window. */
+    shiftOverview(): Promise<ShiftAssignmentEntity[]> {
+        return this.shiftAssignmentRepo.find({
+            where: { status: "ACTIVE" },
+            relations: ["doctor"],
+            order: { startTime: "ASC" },
+        });
+    }
+
+    /**
+     * Free 30-minute slots for a doctor on a date: the doctor's working windows
+     * (ACTIVE shift assignments that day) minus slots already booked.
+     */
+    async availability(doctorId: number, dateStr: string): Promise<string[]> {
+        const [y, m, d] = dateStr.split("-").map(Number);
+        const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);
+        const dayEnd = new Date(y, m - 1, d, 23, 59, 59, 999);
+        const SLOT = 30 * 60 * 1000;
+
+        const windows = await this.shiftAssignmentRepo.find({
+            where: { doctor: { id: doctorId }, status: "ACTIVE", startTime: Between(dayStart, dayEnd) },
+        });
+        const appts = await this.appointmentRepo.find({
+            where: { doctor: { id: doctorId }, apTime: Between(dayStart, dayEnd) },
+        });
+        const apptMs = appts.map((a) => new Date(a.apTime).getTime());
+        const taken = (slotMs: number) =>
+            apptMs.some((am) => am >= slotMs && am < slotMs + SLOT);
+
+        const slots: string[] = [];
+        for (const w of windows) {
+            let t = new Date(w.startTime).getTime();
+            const end = new Date(w.endTime).getTime();
+            while (t + SLOT <= end) {
+                if (!taken(t)) slots.push(new Date(t).toISOString());
+                t += SLOT;
+            }
+        }
+        return [...new Set(slots)].sort();
     }
 
     /** Shift assignments of the logged-in doctor. */
@@ -92,13 +141,21 @@ export class DoctorService implements IDoctorService {
         return a;
     }
 
-    /** Cancel an assignment by its id (no longer counts toward salary). */
+    /**
+     * Cancel an assignment. The doctor is still paid for the hours actually worked
+     * up to the cancel time (worked = clamp(now, start, end) - start).
+     */
     async cancelAssignment(doctorId: number, assignmentId: number): Promise<ShiftAssignmentEntity> {
-        await this.assertOwnsAssignment(doctorId, assignmentId);
+        const a = await this.assertOwnsAssignment(doctorId, assignmentId);
+        const now = Date.now();
+        const start = new Date(a.startTime).getTime();
+        const end = new Date(a.endTime).getTime();
+        const stoppedAt = Math.min(Math.max(now, start), end);
+        const worked = Math.max(0, (stoppedAt - start) / 3_600_000);
         await this.shiftAssignmentRepo.update(assignmentId, {
             status: "CANCELED",
-            endTime: new Date(),
-            duration: 0,
+            endTime: new Date(stoppedAt),
+            duration: Math.round(worked * 100) / 100,
         });
         const updated = await this.shiftAssignmentRepo.findOne({ where: { id: assignmentId } });
         if (!updated) throw new NotFoundException("Không tìm thấy ca trực");

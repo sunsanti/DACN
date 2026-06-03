@@ -35,11 +35,13 @@ export class AdminService {
         const doctors = await this.doctorRepo.find();
         const assignments = await this.shiftAssignmentRepo.find({ relations: ["doctor"] });
 
+        // Pay for hours actually worked: ACTIVE shifts pay full, CANCELED shifts pay
+        // the partial hours worked before cancel (stored in `duration`).
         const hoursByDoctor = new Map<number, number>();
         for (const a of assignments) {
             const docId = a.doctor?.id;
-            if (!docId || a.status !== "ACTIVE" || !a.startTime || !a.endTime) continue;
-            const hours = (new Date(a.endTime).getTime() - new Date(a.startTime).getTime()) / 3_600_000;
+            if (!docId || (a.status !== "ACTIVE" && a.status !== "CANCELED")) continue;
+            const hours = Number(a.duration) || 0;
             if (hours > 0) {
                 hoursByDoctor.set(docId, (hoursByDoctor.get(docId) ?? 0) + hours);
             }
