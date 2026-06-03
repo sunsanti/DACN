@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { IDoctorService } from "./interfaces/doctor_service.interface";
 import { DoctorEntity } from "./entities/doctor.entity";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -211,6 +211,28 @@ export class DoctorService implements IDoctorService {
             relations: ["patient"],
             order: { apTime: "DESC" },
         });
+    }
+
+    /**
+     * Doctor moves a confirmed appointment to a new free slot (its own availability).
+     * Allowed once per appointment (shared `rescheduled` flag). Stays confirmed.
+     */
+    async rescheduleByDoctor(doctorId: number, appointmentId: number, apTime: string): Promise<AppointmentEntity> {
+        const appt = await this.assertOwns(doctorId, appointmentId);
+        if (appt.cancelReason) throw new BadRequestException("Lịch đã bị hủy");
+        if (appt.confirmCondition === 2) throw new BadRequestException("Lịch đã khám xong");
+        if (appt.rescheduled) throw new BadRequestException("Lịch chỉ được đổi 1 lần");
+        if (!apTime) throw new BadRequestException("Thiếu khung giờ mới");
+        await this.appointmentRepo.update(
+            { id: appointmentId },
+            { apTime: new Date(apTime), rescheduled: true }, // giữ confirmCondition (bác sĩ chọn nên vẫn xác nhận)
+        );
+        const updated = await this.appointmentRepo.findOne({
+            where: { id: appointmentId },
+            relations: ["patient"],
+        });
+        if (!updated) throw new NotFoundException("Lịch khám không tồn tại");
+        return updated;
     }
 
     /** Doctor cancels/rejects an appointment with a reason (sent to the patient). */

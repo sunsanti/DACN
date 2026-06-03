@@ -22,6 +22,7 @@ import { UpdateDoctorDTO } from "./dto/update-doctor.dto";
 import { ReExaminationDTO } from "./dto/reExamination.dto";
 import { RegisterShiftDTO } from "./dto/registerShift.dto";
 import { CancelDTO } from "../patient/dto/cancel.dto";
+import { UpdateAppointmentDTO } from "../patient/dto/update_appointment.dto";
 import { Put, Query } from "@nestjs/common";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -136,6 +137,17 @@ export class DoctorController {
         @Body() dto: CancelDTO,
     ) {
         return this.doctorService.cancelByDoctor(user.doctorId!, id, dto.reason);
+    }
+
+    /** Doctor moves a confirmed appointment to a new free slot (once). */
+    @Roles('doctor')
+    @Put('/reschedule-appointment/:id')
+    rescheduleByDoctor(
+        @CurrentUser() user: JwtPayload,
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: UpdateAppointmentDTO,
+    ) {
+        return this.doctorService.rescheduleByDoctor(user.doctorId!, id, dto.apTime!);
     }
 
     /** Download the AI report PDF a patient generated for an appointment. */
