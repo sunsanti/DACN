@@ -19,6 +19,7 @@ import { ConfirmAppointmentDTO } from "./dto/confirm.dto";
 import { ReAppointmentDTO } from "./dto/RA.dto";
 import { ShiftListDTO } from "./dto/shiftList.dto";
 import { UpdateDoctorDTO } from "./dto/update-doctor.dto";
+import { ReExaminationDTO } from "./dto/reExamination.dto";
 import { Put } from "@nestjs/common";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -68,6 +69,31 @@ export class DoctorController {
     @Get('/list-appointment')
     listAcceptAppointment(@CurrentUser() user: JwtPayload): Promise<AppointmentEntity[]> {
         return this.doctorService.listAcceptedAppointment(user.doctorId!);
+    }
+
+    @Roles('doctor')
+    @Get('/list-completed')
+    listCompleted(@CurrentUser() user: JwtPayload): Promise<AppointmentEntity[]> {
+        return this.doctorService.listCompletedAppointment(user.doctorId!);
+    }
+
+    @Roles('doctor')
+    @Get('/appointment/:id')
+    appointmentDetail(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
+        return this.doctorService.getAppointmentDetail(user.doctorId!, id);
+    }
+
+    @Roles('doctor')
+    @Post('/complete/:id')
+    completeAppointment(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
+        return this.doctorService.completeAppointment(user.doctorId!, id);
+    }
+
+    @Roles('doctor')
+    @Post('/re-examination')
+    reExamination(@CurrentUser() user: JwtPayload, @Body() dto: ReExaminationDTO) {
+        return this.doctorService.reExamination(
+            user.doctorId!, dto.patientId, dto.apTime, dto.address, dto.note ?? null);
     }
 
     @Roles('doctor')

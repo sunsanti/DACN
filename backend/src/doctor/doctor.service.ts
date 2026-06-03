@@ -5,6 +5,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ShiftEntity } from "./entities/shift.entity";
 import { AppointmentEntity } from "../patient/entities/appointment.entity";
+import { PatientEntity } from "../patient/entities/patient.entity";
 import { ShiftAssignmentEntity } from "./entities/shiftAssignment.entity";
 import { ShiftDTO } from "./dto/shift.dto";
 import { UpdateDoctorDTO } from "./dto/update-doctor.dto";
@@ -121,11 +122,62 @@ export class DoctorService implements IDoctorService {
     private async assertOwns(doctorId: number, appointmentId: number): Promise<AppointmentEntity> {
         const appt = await this.appointmentRepo.findOne({
             where: { id: appointmentId },
-            relations: ["doctor"],
+            relations: ["patient", "doctor"],
         });
         if (!appt) throw new NotFoundException("Lịch khám không tồn tại");
         if (appt.doctor?.id !== doctorId) throw new ForbiddenException("Không phải lịch của bạn");
         return appt;
+    }
+
+    /** Appointment detail (with patient info) for the owning doctor. */
+    getAppointmentDetail(doctorId: number, appointmentId: number): Promise<AppointmentEntity> {
+        return this.assertOwns(doctorId, appointmentId);
+    }
+
+    /** Mark an appointment as examined (confirmCondition 2 = đã khám xong). */
+    async completeAppointment(doctorId: number, appointmentId: number): Promise<AppointmentEntity> {
+        await this.assertOwns(doctorId, appointmentId);
+        await this.appointmentRepo.update({ id: appointmentId }, { confirmCondition: 2 });
+        const updated = await this.appointmentRepo.findOne({
+            where: { id: appointmentId },
+            relations: ["patient"],
+        });
+        if (!updated) throw new NotFoundException("Lịch khám không tồn tại");
+        return updated;
+    }
+
+    /** Appointments already examined by this doctor (confirmCondition 2). */
+    listCompletedAppointment(doctorId: number): Promise<AppointmentEntity[]> {
+        return this.appointmentRepo.find({
+            where: { confirmCondition: 2, doctor: { id: doctorId } },
+            relations: ["patient"],
+            order: { apTime: "DESC" },
+        });
+    }
+
+    /** Follow-up: the doctor creates a NEW (already-confirmed) appointment for a patient. */
+    async reExamination(
+        doctorId: number,
+        patientId: number,
+        apTime: string,
+        address: string,
+        note: string | null,
+    ): Promise<AppointmentEntity> {
+        const doctor = await this.getDoctor(doctorId);
+        const patient = await this.appointmentRepo.manager.findOne(PatientEntity, {
+            where: { id: patientId },
+        });
+        if (!patient) throw new NotFoundException("Bệnh nhân không tồn tại");
+        return this.appointmentRepo.save({
+            apTime: new Date(apTime),
+            confirmDate: new Date(),
+            address,
+            note: note ?? null,
+            confirmCondition: 0, // doctor-created -> already confirmed
+            doctorName: doctor.name,
+            patient: { id: patientId } as PatientEntity,
+            doctor: { id: doctorId } as DoctorEntity,
+        });
     }
 
     createDoctor(): Promise<DoctorEntity> {
