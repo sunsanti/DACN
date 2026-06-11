@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt,IsDate,IsString, IsDateString } from 'class-validator'
+import { IsInt, IsString, IsDateString, IsOptional } from 'class-validator'
 
 export class CreateAppoinmentDTO {
 
@@ -10,4 +10,13 @@ export class CreateAppoinmentDTO {
     @ApiProperty()
     @IsString()
     address: string;
+
+    @ApiProperty({ example: 1 })
+    @IsInt()
+    doctorId: number;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    note?: string;
 }

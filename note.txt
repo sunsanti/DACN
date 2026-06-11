@@ -1,0 +1,27 @@
+ở mục 1. Đề tài & mục tiêu (theo báo cáo): ý tưởng của tôi là khi tiến hành trợ lý AI
+thì trợ lý AI sẽ tiến hành xem xét các triệu chứng + ảnh của bệnh để tiến hành tổng kết
+chuẩn đoán sơ bộ thành một file pdf và gửi riêng cho bác sĩ để bác sĩ có thể xem trước
+và đưa ra chuẩn đoán cho bệnh nhân đã gửi pdf đó
+
+mục 2. Phạm vi & côn nghệ:
+Frontend sử dụng flutter
+backend sử dụng nestjs
+CSDL thì tiến hành sử dụng PostgreSQL + TypeORM thôi không sử dụng Firebase
+AI: thì sẽ gồm 2 phần, phần nhân diện hình ảnh và phần chatbox, phần nhận diện hình ảnh thì
+bệnh nhân sẽ gửi ảnh và AI sẽ phân tích và nhận diện hình ảnh đó xem đó là bệnh gì
+còn đối với chatbox thì bệnh nhân sẽ nhập các triệu chứng rồi sau đó dựa theo các triệu chứng đã có
+để tiến hành match với các bệnh để chuẩn đoán xem là bệnh gì dựa theo triệu chứng và sau đó hệ thống
+sẽ tổng hợp kết quả từ nhận diện hình ảnh bệnh và triệu chứng bệnh nhân để đúc kết lại thành một file báo cáo
+pdf để gửi riêng cho bác sĩ xem và chuẩn đoán sơ bộ cho bệnh nhân (trong trường hợp không train được chatbox thì có thể
+call API từ các AI khác như gemini để tiến hành chat rồi tổng kết lại kết quả)
+
+mục 4. các use case sẽ gồm có:
+đối với bệnh nhân: add/edit/delete/list appointment, edit information của bệnh nhân
+đối với bác sĩ: list confirm appointment, list unconfirm appointment, Add/Delete Shift,
+cancel shift, reAppointment ( tái khám ), confirm Appointment, list shift
+đối với admin: thì sẽ xem số giờ làm việc của bác sĩ, và tính tiền dựa theo số giờ làm đó,
+thêm bác sĩ mới
+
+ở mục 6:
+tôi sẽ không thực hiện video call, sms-email
+không cần chuyên khoa trong entity

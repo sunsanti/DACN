@@ -1,19 +1,19 @@
-import { IsString, IsInt, IsDate, IsOptional} from 'class-validator'
+import { ApiProperty } from "@nestjs/swagger";
+import { IsString, IsDateString, IsOptional } from "class-validator";
 
 export class UpdateAppointmentDTO {
+    @ApiProperty({ required: false, example: "2026-08-10T09:00:00.000Z" })
+    @IsDateString()
+    @IsOptional()
+    apTime?: string;
+
+    @ApiProperty({ required: false })
     @IsString()
     @IsOptional()
-    name?: string;
+    address?: string;
 
-    @IsDate()
-    @IsOptional()
-    apTime?: Date;
-
+    @ApiProperty({ required: false })
     @IsString()
     @IsOptional()
-    address: string;
-
-    @IsString()
-    @IsOptional()
-    doctor: string;
+    note?: string;
 }

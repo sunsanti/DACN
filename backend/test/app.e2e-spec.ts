@@ -16,11 +16,9 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  it('/hello (GET) is protected by the global auth guard', () => {
+    // After F01 a global JwtAuthGuard protects every non-@Public route.
+    return request(app.getHttpServer()).get('/hello').expect(401);
   });
 
   afterEach(async () => {

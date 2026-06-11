@@ -1,7 +1,6 @@
 {
   "dependencies": {
     "class-validator": "^0.15.1",
-    "orm": "^8.0.1",
     "validator": "^13.15.35"
   }
 }

@@ -1,0 +1,27 @@
+# Dependencies (installed via npm install)
+node_modules/
+
+# Claude Code
+.claude/
+
+# Knowledge base (local only)
+docs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Python (AI service)
+.venv/
+__pycache__/
+*.pyc
+
+# ML model weights (large — distribute out of band)
+*.pth
+*.pt
+*.onnx
+*.safetensors
+
+# Secrets
+.env
+.env.local
