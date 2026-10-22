@@ -73,10 +73,6 @@ class DoctorService {
     });
   }
 
-  Future<void> deleteAppointment(int appointmentId) async {
-    await DioClient.dio.delete('/doctor/appointment/$appointmentId');
-  }
-
   /// Reject (pending) or cancel (confirmed) with a reason -> sent to the patient.
   Future<void> cancelByDoctor(int appointmentId, String reason) async {
     await DioClient.dio.post('/doctor/cancel-appointment/$appointmentId', data: {'reason': reason});
@@ -85,13 +81,6 @@ class DoctorService {
   /// Doctor moves a confirmed appointment to a new free slot (once).
   Future<void> reschedule(int appointmentId, String apTime) async {
     await DioClient.dio.put('/doctor/reschedule-appointment/$appointmentId', data: {'apTime': apTime});
-  }
-
-  /// Free 30-min slots of a doctor on a date (for the doctor to pick a new slot).
-  Future<List<DateTime>> availability(int doctorId, String date) async {
-    final res = await DioClient.dio
-        .get('/doctor/availability', queryParameters: {'doctorId': doctorId, 'date': date});
-    return (res.data as List).map((e) => DateTime.parse(e as String).toLocal()).toList();
   }
 
   Future<void> confirm(int appointmentId,

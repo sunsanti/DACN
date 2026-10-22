@@ -15,6 +15,8 @@ class DioClient {
         baseUrl: ApiConfig.baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 60), // AI model can be slow
+        // Free ngrok serves a warning page instead of the API unless this header is set; harmless elsewhere.
+        headers: {'ngrok-skip-browser-warning': 'true'},
       ),
     );
 

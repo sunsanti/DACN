@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/dio_client.dart';
 import '../core/ui.dart';
 import '../providers/doctor_provider.dart';
-import '../services/doctor_service.dart';
+import '../services/appointment_service.dart';
 
 class ReExaminationScreen extends StatefulWidget {
   final int doctorId;
@@ -49,8 +49,7 @@ class _ReExaminationScreenState extends State<ReExaminationScreen> {
       _slot = null;
     });
     try {
-      final d = '${_date.year}-${_date.month}-${_date.day}';
-      final slots = await DoctorService().availability(widget.doctorId, d);
+      final slots = await AppointmentService().availability(widget.doctorId, fmtYmd(_date));
       if (mounted) setState(() => _slots = slots);
     } catch (e) {
       if (mounted) {

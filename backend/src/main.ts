@@ -9,6 +9,10 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Behind ngrok the agent connects from localhost: trust X-Forwarded-For only from loopback,
+  // so req.ip (rate limit on /auth/bhyt-lookup) is the real client, and LAN clients can't spoof it.
+  app.set('trust proxy', 'loopback');
+
   // Allow the Flutter web build (and any dev origin) to call the API.
   app.enableCors();
 
