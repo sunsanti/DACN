@@ -242,3 +242,44 @@ class SessionTitle extends StatelessWidget {
     );
   }
 }
+
+/// Round icon "bubble" with a label underneath and an optional count badge (home shortcuts).
+class Bubble extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color; // icon color; the circle is a light tint of it
+  final int badge;
+  final VoidCallback onTap;
+  const Bubble(this.icon, this.label,
+      {super.key, required this.color, this.badge = 0, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Badge(
+              isLabelVisible: badge > 0,
+              label: Text(badge > 99 ? '99+' : '$badge'),
+              child: CircleAvatar(
+                radius: 30,
+                backgroundColor: color.withValues(alpha: 0.14),
+                child: Icon(icon, color: color, size: 28),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, height: 1.2)),
+          ],
+        ),
+      ),
+    );
+  }
+}

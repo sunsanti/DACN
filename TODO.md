@@ -203,13 +203,13 @@ Thứ tự: (Phase 9 ∥ Phase 10) → **cổng duyệt `pre_implement/`** → (
 - [x] Kiểm tra: test, analyze, chụp 2 ca → `screenshots/phase-10/`
 
 ## Phase 11: Trang chủ bệnh nhân (`patient-home`), sau cổng duyệt
-- [ ] F11.1 Widget `Bubble` trong `core/ui.dart`
-- [ ] F11.2 `MyAppointmentsScreen` + chip lọc
-- [ ] F11.3 `PaidBillsScreen`
-- [ ] F11.4 Home: carousel + 6 bubble có badge, bỏ FAB
-- [ ] F11.5 Bubble "Báo cáo AI": chọn lịch hẹn
-- [ ] F11.6 Carousel: mũi tên trái/phải + widget test
-- [ ] Kiểm tra: analyze, test, chụp → `screenshots/phase-11/`
+- [x] F11.1 Widget `Bubble` trong `core/ui.dart`
+- [x] F11.2 `MyAppointmentsScreen` + chip lọc
+- [x] F11.3 `PaidBillsScreen`
+- [x] F11.4 Home: carousel + 6 bubble có badge, bỏ FAB
+- [x] F11.5 Bubble "Báo cáo AI": chọn lịch hẹn
+- [x] F11.6 Carousel: mũi tên trái/phải + widget test
+- [x] Kiểm tra: analyze, test (4/4), chụp → `screenshots/phase-11/` (tài khoản test chưa có lịch hẹn nên ảnh không có badge)
 
 ## Phase 12: Điều hướng admin (`admin-nav`), sau cổng duyệt
 - [ ] F12.1 Tham số `embedded` cho 3 màn con

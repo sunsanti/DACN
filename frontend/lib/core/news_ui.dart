@@ -59,15 +59,40 @@ class _NewsCarouselState extends State<NewsCarousel> {
   @override
   void initState() {
     super.initState();
-    if (widget.items.length > 1) {
-      _timer = Timer.periodic(const Duration(seconds: 5), (_) {
-        if (!_controller.hasClients) return;
-        final next = (_page + 1) % widget.items.length;
-        _controller.animateToPage(next,
-            duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
-      });
-    }
+    _restartTimer();
   }
+
+  /// Auto-advance every 5 s; restarted on every manual move so a slide never jumps right after a tap/swipe.
+  void _restartTimer() {
+    _timer?.cancel();
+    if (widget.items.length < 2) return;
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) => _go(1, manual: false));
+  }
+
+  /// Move by [delta] pages, wrapping around at both ends.
+  void _go(int delta, {bool manual = true}) {
+    if (!_controller.hasClients) return;
+    final n = widget.items.length;
+    _controller.animateToPage(
+      (_page + delta + n) % n,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+    if (manual) _restartTimer();
+  }
+
+  Widget _arrow(Alignment align, IconData icon, String tooltip, int delta) => Align(
+    alignment: align,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: IconButton.filledTonal(
+        tooltip: tooltip,
+        style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.85)),
+        icon: Icon(icon),
+        onPressed: () => _go(delta),
+      ),
+    ),
+  );
 
   @override
   void dispose() {
@@ -83,50 +108,68 @@ class _NewsCarouselState extends State<NewsCarousel> {
       children: [
         SizedBox(
           height: 180,
-          child: PageView.builder(
-            controller: _controller,
-            itemCount: widget.items.length,
-            onPageChanged: (i) => setState(() => _page = i),
-            itemBuilder: (_, i) {
-              final n = widget.items[i];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: InkWell(
-                    onTap: () => openExternal(context, n.url),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        NewsImage(n.imagePath),
-                        const DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [Colors.transparent, Colors.black87],
-                              stops: [0.45, 1],
-                            ),
+          child: Stack(
+            children: [
+              NotificationListener<ScrollStartNotification>(
+                // A finger swipe also counts as manual: restart the auto-play countdown.
+                onNotification: (n) {
+                  if (n.dragDetails != null) _restartTimer();
+                  return false;
+                },
+                child: PageView.builder(
+                  controller: _controller,
+                  itemCount: widget.items.length,
+                  onPageChanged: (i) => setState(() => _page = i),
+                  itemBuilder: (_, i) {
+                    final n = widget.items[i];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          onTap: () => openExternal(context, n.url),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              NewsImage(n.imagePath),
+                              const DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [Colors.transparent, Colors.black87],
+                                    stops: [0.45, 1],
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                left: 14,
+                                right: 14,
+                                bottom: 12,
+                                child: Text(
+                                  n.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Positioned(
-                          left: 14,
-                          right: 14,
-                          bottom: 12,
-                          child: Text(
-                            n.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+              if (widget.items.length > 1) ...[
+                _arrow(Alignment.centerLeft, Icons.chevron_left, 'Tin trước', -1),
+                _arrow(Alignment.centerRight, Icons.chevron_right, 'Tin sau', 1),
+              ],
+            ],
           ),
         ),
         if (widget.items.length > 1)

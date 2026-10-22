@@ -21,7 +21,8 @@ State management **Provider**, HTTP **dio** + JWT interceptor (auto-logout 401),
 | Thành phần | File | Ghi chú |
 | --- | --- | --- |
 | `UserAvatar`, `AvatarPicker`, `SessionTitle`, `imageUrl()`, `fmtMoney()` | `core/ui.dart` | Avatar ảnh hoặc chữ cái đầu; header "Xin chào, {name}" ở 3 home |
-| `NewsCarousel`, `NewsTile`, `NewsImage`, `openExternal()` | `core/news_ui.dart` | `PageView` tự chuyển 5s, ảnh lỗi → placeholder; web dùng `LaunchMode.platformDefault` (web không hỗ trợ `externalApplication`) |
+| `Bubble` | `core/ui.dart` | Nút tròn icon + nhãn + `Badge` đếm (99+), dùng ở trang chủ bệnh nhân (spec 05) |
+| `NewsCarousel`, `NewsTile`, `NewsImage`, `openExternal()` | `core/news_ui.dart` | `PageView` tự chuyển 5s, mũi tên trái/phải (vòng lại 2 đầu, ẩn khi 1 tin; bấm/vuốt reset timer), ảnh lỗi → placeholder; web dùng `LaunchMode.platformDefault` (web không hỗ trợ `externalApplication`) |
 | `BillCard`, `PaymentChip`, `BhytTag`, `pickDiseases()`, `InsuranceBadge` | `core/billing_ui.dart` | Hoá đơn có nhãn BHYT từng dòng, "BHYT chi trả (80% × coveredBase)", "Cần thanh toán" + trạng thái thanh toán; dialog chọn nhiều bệnh (nhãn BHYT) |
 | `PaymentScreen` | `screens/payment_screen.dart` | Hoá đơn + chọn Tiền mặt / QR; QR vẽ bằng `QrImageView` (`qr_flutter`) từ `qr.payload`; polling 3 s |
 | `PaymentSuccess` | `core/payment_success.dart` | `Lottie.asset('assets/lottie/success_check.json', repeat: false)` (file tự viết) + 3 `ConfettiWidget` hạt dài (băng rôn) rơi từ trên |
@@ -49,7 +50,7 @@ State management **Provider**, HTTP **dio** + JWT interceptor (auto-logout 401),
 
 ## Luồng bệnh nhân
 
-Login/Register → `PatientHomeScreen` (danh sách lịch, `GET /patient/list-appointment`) →
+Login/Register → `PatientHomeScreen` (carousel tin + 6 `Bubble`: Đặt lịch, Lịch hẹn, Chờ thanh toán, Hoá đơn đã trả, Báo cáo AI, Hồ sơ; badge đếm từ `GET /patient/list-appointment`) → `MyAppointmentsScreen` (danh sách + `FilterChip` theo `AppointmentFilter`) / `PaidBillsScreen` (lọc `isPaid` ở client) →
 `CreateAppointmentScreen` (chọn bác sĩ `GET /doctor/list`, ngày/giờ, địa chỉ, ghi chú →
 `POST /patient/create-appointment`) → `AiReportScreen` (chọn ảnh + triệu chứng →
 `POST /ai/report` multipart → nhận bytes PDF → lưu temp → mở bằng `open_filex`).
