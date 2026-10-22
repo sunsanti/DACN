@@ -183,14 +183,14 @@ Thứ tự: Phase 0 → (Phase 1, Phase 2 song song được) → Phase 3 → Ph
 Thứ tự: (Phase 9 ∥ Phase 10) → **cổng duyệt `pre_implement/`** → (Phase 11 ∥ Phase 12) → Phase 13 → Phase 14.
 
 ## Trước khi bắt đầu
-- [ ] Duyệt spec 05 và trả lời Q1–Q6 (mục 11 của spec)
+- [x] Spec 05: theo phương án đề xuất Q1–Q6
 - [x] Q3: dùng `@nestjs/throttler` (chỉ áp cho bhyt-lookup)
 
 ## Phase 9: Template + mockup (`ui-preview`)
 - [x] U9.1 Tìm 2–3 template, ghi link + giấy phép vào `pre_implement/README.md`
 - [x] U9.2 Chốt hướng chung: màu, bo góc, kiểu bubble/thẻ
 - [x] U9.3 4 mockup PNG: patient-home, patient-register, admin-home, doctor-home
-- [ ] U9.4 **Bạn duyệt** → ghi "Đã duyệt" vào README
+- [x] U9.4 **Bạn duyệt** (2026-10-22)
 
 ## Phase 10: Tra BHYT khi đăng ký (`register-bhyt`)
 - [x] B10.1 `BhytLookupDto`
@@ -219,10 +219,10 @@ Thứ tự: (Phase 9 ∥ Phase 10) → **cổng duyệt `pre_implement/`** → (
 - [x] Kiểm tra: analyze, test; badge kiểm bằng 3 thông báo tạm trong DB (đã xoá); chụp → `screenshots/phase-12/`
 
 ## Phase 13: Giao diện bác sĩ (`doctor-ui`), sau cổng duyệt
-- [ ] F13.1 Đầu trang + 3 thẻ thống kê
-- [ ] F13.2 Nút / mục "Ca làm"
-- [ ] F13.3 Thẻ lịch hẹn gọn, hành động phụ trong bottom sheet
-- [ ] Checklist hồi quy 10 hành động (xem plan) + chụp → `screenshots/phase-13/`
+- [x] F13.1 Đầu trang + 3 thẻ thống kê
+- [x] F13.2 Nút / mục "Ca làm"
+- [x] F13.3 Thẻ lịch hẹn gọn, hành động phụ trong bottom sheet
+- [x] Checklist hồi quy: đủ 10 thao tác (Xác nhận, Đã khám xong, Dời lịch, Tái khám, Báo cáo AI, Không nhận bệnh, Hủy lịch, Chi tiết, Ca trực, Đăng xuất); kiểm tay mở sheet + mở hộp dời lịch rồi huỷ (không đổi dữ liệu); chụp → `screenshots/phase-13/`
 
 ## Phase 14: Tài liệu
 - [ ] Wiki (api-routes, auth-flow, ui-components, patient/admin/doctor module, log)

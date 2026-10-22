@@ -55,6 +55,13 @@ Login/Register → `PatientHomeScreen` (carousel tin + 6 `Bubble`: Đặt lịch
 `POST /patient/create-appointment`) → `AiReportScreen` (chọn ảnh + triệu chứng →
 `POST /ai/report` multipart → nhận bytes PDF → lưu temp → mở bằng `open_filex`).
 
+## Luồng bác sĩ (spec 05)
+
+`DoctorHomeScreen`: AppBar (avatar + Đăng xuất) → dải màu primary có 3 thẻ số (Chờ xác nhận / Lịch hôm nay / Đã khám) →
+thẻ "Ca làm của tôi" (phụ đề = ca ACTIVE hôm nay từ `GET /doctor/my-shifts`, bấm → `DoctorShiftsScreen`) → `TabBar`
+Chờ / Đã xác nhận / Đã khám. Mỗi thẻ lịch: nút chính theo trạng thái (Xác nhận / Đã khám xong / Tái khám) + "Chi tiết";
+thao tác phụ (Dời lịch, Báo cáo AI, Không nhận bệnh, Hủy lịch) nằm trong bottom sheet "⋯", chạy **sau khi** sheet đóng.
+
 ## Deps (pubspec.yaml)
 
 `provider`, `dio`, `shared_preferences`, `image_picker`, `path_provider`, `open_filex`, `url_launcher`.

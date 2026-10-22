@@ -1,6 +1,6 @@
 # Pre-implement: template và giao diện dự kiến (spec 05, Phase 9)
 
-Ngày: 2026-10-22 · Trạng thái: **Chờ bạn duyệt** (bắt buộc với giao diện bác sĩ, theo `note.txt`)
+Ngày: 2026-10-22 · Trạng thái: **Đã duyệt 2026-10-22** và đã triển khai (spec 05, phase 11–13)
 
 ## 1. Template tham khảo
 
@@ -40,10 +40,11 @@ Ngày: 2026-10-22 · Trạng thái: **Chờ bạn duyệt** (bắt buộc với 
 
 | Màn | Duyệt? | Ghi chú |
 |---|---|---|
-| Bệnh nhân | | |
-| Admin | | |
-| Bác sĩ | | **Chưa code cho tới khi bạn duyệt** |
+| Bệnh nhân | ✅ | |
+| Admin | ✅ | |
+| Bác sĩ | ✅ | |
 
+tôi thấy giao diện hiện tại ổn
 ## Chụp lại ảnh
 
 ```bash

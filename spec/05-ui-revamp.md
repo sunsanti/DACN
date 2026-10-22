@@ -1,6 +1,6 @@
 # 05. Làm mới giao diện: bubble bệnh nhân, tra BHYT khi đăng ký, điều hướng admin, giao diện bác sĩ
 
-Ngày: 2026-10-22 · Trạng thái: **Bản nháp, chờ duyệt** · Nguồn: `note.txt` · Plan: [`plans/05-ui-revamp.md`](../plans/05-ui-revamp.md) · Tiến độ: `TODO.md` (Phase 9–14)
+Ngày: 2026-10-22 · Trạng thái: **Đã triển khai** (2026-10-22) · Nguồn: `note.txt` · Plan: [`plans/05-ui-revamp.md`](../plans/05-ui-revamp.md) · Tiến độ: `TODO.md` (Phase 9–14)
 
 ## 1. Mục tiêu
 

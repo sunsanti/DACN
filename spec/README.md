@@ -10,7 +10,7 @@ Ngày: 2026-10-04 · Trạng thái: **Đã chốt và đã triển khai** (2026-
 | 2 | Ảnh đại diện: bệnh nhân chọn khi đăng ký (tuỳ chọn), bác sĩ bắt buộc. Hiện avatar sau khi login và khi chọn bác sĩ | [02-avatar.md](02-avatar.md) |
 | 3 | Bảo hiểm y tế (BHYT): khai báo thẻ, tính số tiền được BHYT chi trả và số tiền bệnh nhân phải trả | [03-insurance.md](03-insurance.md) |
 | 4 | **(Đã triển khai)** CCCD bắt buộc khi đăng ký → tự gắn BHYT; dịch vụ đánh dấu được BHYT chi trả; thanh toán tiền mặt / QR. **Thay phần khai thẻ của spec 3** | [04-cccd-bhyt-payment.md](04-cccd-bhyt-payment.md) |
-| 5 | **(Chờ duyệt)** Làm mới giao diện: bubble bệnh nhân + màn Lịch hẹn/Hoá đơn, mũi tên carousel, tra BHYT khi đăng ký, thanh điều hướng admin + badge, giao diện bác sĩ theo template | [05-ui-revamp.md](05-ui-revamp.md) |
+| 5 | **(Đã triển khai)** Làm mới giao diện: bubble bệnh nhân + màn Lịch hẹn/Hoá đơn, mũi tên carousel, tra BHYT khi đăng ký, thanh điều hướng admin + badge, giao diện bác sĩ theo template | [05-ui-revamp.md](05-ui-revamp.md) |
 
 ## Quyết định chung (áp dụng cho cả 3 tính năng)
 
