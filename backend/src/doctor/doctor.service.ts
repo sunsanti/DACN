@@ -1,5 +1,4 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { IDoctorService } from "./interfaces/doctor_service.interface";
 import { DoctorEntity } from "./entities/doctor.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Between, In, IsNull, Repository } from "typeorm";
@@ -17,7 +16,7 @@ import { calcBill } from "../billing/billing.util";
 import { BhytService } from "../billing/bhyt.service";
 
 @Injectable()
-export class DoctorService implements IDoctorService {
+export class DoctorService {
     constructor(
         @InjectRepository(DoctorEntity)
         private doctorRepo: Repository<DoctorEntity>,
@@ -508,11 +507,5 @@ async addWorkingTime(
         });
         if (!confirmedAppointment) throw new NotFoundException("Lịch khám không tồn tại");
         return confirmedAppointment;
-    }
-
-    //remember to make the payment for the app, with the qr is ok
-    calculateTime(): Promise<void> {
-
-        return Promise.resolve();
     }
 }

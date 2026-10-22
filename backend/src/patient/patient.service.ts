@@ -1,5 +1,4 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { IPatientService } from "./interfaces/patient_service.interface";
 import { CreateAppoinmentDTO } from "./dto/create_appointment.dto";
 import { UpdateAppointmentDTO } from "./dto/update_appointment.dto";
 import { UpdatePatientDTO } from "./dto/update_patient.dto";
@@ -12,7 +11,7 @@ import { DoctorService } from "../doctor/doctor.service";
 import { BhytService } from "../billing/bhyt.service";
 
 @Injectable()
-export class PatientService implements IPatientService {
+export class PatientService {
     constructor(
         @InjectRepository(AppointmentEntity)
         private appointmentRepo: Repository<AppointmentEntity>,
@@ -27,10 +26,6 @@ export class PatientService implements IPatientService {
 
         private bhytService: BhytService,
     ) {}
-    // private patiens: Patient[] = [
-    //     {id: 1, name: 'Nguyen Van A', gender: 'male', age: 18, birthDate: new Date('2025-10-06'), email: 'abc@gmail.com', phone: '011111111', address: 'abc', createAt: new Date('2024-18-05'), avatar: 'abcs'}
-    // ];
-
     async setAppointment(patientId: number, dto: CreateAppoinmentDTO): Promise<AppointmentEntity> {
         const doctor = await this.doctorRepo.findOne({ where: { id: dto.doctorId } });
         if (!doctor) throw new NotFoundException('Bác sĩ không tồn tại');
@@ -48,22 +43,6 @@ export class PatientService implements IPatientService {
         });
     }
 
-    createPatient(): Promise<PatientEntity> {
-        let newPatient = {
-            name: 'Nguyen Van A',
-            gender: 'male',
-            age: 18,
-            birthDate: new Date('2025-10-06'),
-            email: 'abc@gmail.com',
-            phone: '0111111111',
-            address: '123 Le Van Huu',
-            createAt: new Date(),
-            avatar: 'link'
-        }
-        return this.patientRepo.save(newPatient);
-    }
-
-    /** Own profile. */
     /** Own profile + full CCCD (owner only) + BHYT looked up by CCCD (null = none → app hides the field). */
     async getProfile(patientId: number) {
         const patient = await this.patientRepo
@@ -81,8 +60,6 @@ export class PatientService implements IPatientService {
         if (!patient) throw new NotFoundException('Không tìm thấy hồ sơ bệnh nhân');
         return patient;
     }
-
-
 
     async updateProfile(patientId: number, dto: UpdatePatientDTO): Promise<PatientEntity> {
         const patient = await this.findPatient(patientId);

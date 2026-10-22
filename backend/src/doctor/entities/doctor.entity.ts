@@ -1,8 +1,5 @@
-import { timeStamp } from "console";
 import { AppointmentEntity } from "../../patient/entities/appointment.entity";
-import { Column, Entity, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { ShiftDTO } from "../dto/shift.dto";
-import { ShiftEntity } from "./shift.entity";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { ShiftAssignmentEntity } from "./shiftAssignment.entity";
 
 @Entity('doctor')
@@ -37,11 +34,6 @@ export class DoctorEntity {
 
     @OneToMany(() => AppointmentEntity, (appointments) => appointments.doctor)
     appointments: AppointmentEntity[];
-
-    // làm cái của shift
-    // @ManyToMany(() => ShiftEntity, (shift) => shift.doctors)
-    // @JoinTable()
-    // shifts: ShiftEntity[];
 
     @OneToMany(() => ShiftAssignmentEntity, (sa) => sa.doctor)
     shiftAssignments: ShiftAssignmentEntity[];
