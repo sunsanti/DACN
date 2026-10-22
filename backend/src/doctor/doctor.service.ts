@@ -6,7 +6,6 @@ import { ShiftEntity } from "./entities/shift.entity";
 import { AppointmentEntity } from "../patient/entities/appointment.entity";
 import { PatientEntity } from "../patient/entities/patient.entity";
 import { ShiftAssignmentEntity } from "./entities/shiftAssignment.entity";
-import { ShiftDTO } from "./dto/shift.dto";
 import { UpdateDoctorDTO } from "./dto/update-doctor.dto";
 import { MedicalReportEntity } from "../patient/entities/medical_report.entity";
 import { DiseaseEntity } from "../disease/disease.entity";
@@ -298,12 +297,7 @@ export class DoctorService {
             { id: appointmentId },
             { apTime: new Date(apTime), rescheduled: true }, // giữ confirmCondition (bác sĩ chọn nên vẫn xác nhận)
         );
-        const updated = await this.appointmentRepo.findOne({
-            where: { id: appointmentId },
-            relations: ["patient", "doctor"],
-        });
-        if (!updated) throw new NotFoundException("Lịch khám không tồn tại");
-        return updated;
+        return this.reload(appointmentId, ["patient", "doctor"]);
     }
 
     /** Doctor cancels/rejects an appointment with a reason (sent to the patient). */
@@ -313,12 +307,7 @@ export class DoctorService {
             { id: appointmentId },
             { cancelReason: reason, canceledBy: "doctor" },
         );
-        const updated = await this.appointmentRepo.findOne({
-            where: { id: appointmentId },
-            relations: ["patient", "doctor"],
-        });
-        if (!updated) throw new NotFoundException("Lịch khám không tồn tại");
-        return updated;
+        return this.reload(appointmentId, ["patient", "doctor"]);
     }
 
     /** Follow-up: the doctor creates a NEW (already-confirmed) appointment for a patient. */
@@ -365,136 +354,6 @@ export class DoctorService {
         });
     }
 
-    async listOfShifts(doctorId: number): Promise<ShiftAssignmentEntity[]> {
-        // const doctor = await this.doctorRepo.findOne({
-        //     where: {id: doctorId},
-        //     relations: ['shifts']
-        // })
-        
-        // if(!doctor) return Promise.resolve({} as ShiftEntity[])
-
-        // return doctor.shifts;
-        const shift = await this.shiftAssignmentRepo.find({
-            where: {doctor: {
-                id: doctorId,
-            }}
-        });
-
-        if(!shift) return []
-
-        return shift;
-    }
-
-    // đối với cái này sẽ làm cái struct ở ngoại để tính tổng thời lượng cho tiện, còn việc đăng kí shift cụ thể thì để làm function rồi đẩy nó lên luôn
-    //nhớ lưu db riêng là weeks nữa để tính tổng số giờ làm á\
-    //check if that day there is anyone cancel the shift first
-async addWorkingTime(
-  doctorId: number,
-  shifts: ShiftDTO[]
-): Promise<ShiftAssignmentEntity[]> {
-
-  const now = new Date();
-  const results: ShiftAssignmentEntity[] = [];
-
-  for (const shift of shifts) {
-
-    // 1. tìm record canceled
-    const canceled = await this.shiftAssignmentRepo.findOne({
-      where: {
-        shift: { id: shift.shiftId },
-        status: 'CANCELED'
-      }
-    });
-
-    let endTime = shift.endTime;
-
-    // 2. nếu có canceled → lấy endTime từ canceled
-    if (canceled) {
-      endTime = canceled.endTime;
-    }
-
-    // duration (giờ) của ca = endTime - startTime (cột duration là NOT NULL)
-    const end = new Date(endTime);
-    const duration = Math.max(0, (end.getTime() - now.getTime()) / 3_600_000);
-
-    // 3. luôn CREATE NEW ROW
-    const created = await this.shiftAssignmentRepo.save({
-      doctor: { id: doctorId },
-      shift: { id: shift.shiftId },
-      status: 'ACTIVE',
-      startTime: now,
-      endTime: end,
-      type: shift.type,
-      duration,
-    });
-
-    results.push(created);
-  }
-
-  return results;
-}
-
-    async deleteShift(doctorId: number, shiftId: number): Promise<void> {
-        // const doctorShift = await this.doctorRepo.findOne({
-        //     where: {
-        //         id: doctorId,
-        //     },
-        //     relations: ['shifts']
-        // })
-
-        // const shift = doctorShift?.shifts.find(s => s.id === shiftId);
-        // await this.doctorRepo
-        //     .createQueryBuilder()
-        //     .relation('shifts')
-        //     .of(doctorId)
-        //     .remove(shiftId)
-        
-        // await this.shiftRepo.delete(shiftId);
-        // return Promise.resolve({} as DoctorEntity);
-        const deleteShift = await this.shiftAssignmentRepo.delete({
-            doctor: { id: doctorId },
-            shift: { id: shiftId }
-        })
-    }
-
-    async cancelShift(doctorId: number, shiftId: number): Promise<void> {
-        const now = new Date();
-        const shift = await this.shiftAssignmentRepo.findOne({
-            where: {
-                doctor: { id: doctorId },
-                shift: { id: shiftId }
-            }
-        });
-        if (!shift) throw new NotFoundException("Không tìm thấy ca trực");
-
-        // Số giờ đã làm tính tới lúc huỷ = now - startTime (thay công thức cũ bị
-        // sai thứ tự toán tử: `12 - h + m/60`).
-        const worked = Math.max(0, (now.getTime() - new Date(shift.startTime).getTime()) / 3_600_000);
-
-        await this.shiftAssignmentRepo.update(
-            { doctor: { id: doctorId }, shift: { id: shiftId } },
-            { status: 'CANCELED', endTime: now, duration: Math.round(worked * 100) / 100 }
-        );
-    }
-
-    async deleteAppointment(doctorId: number, appointmentId: number): Promise<void> {
-        await this.assertOwns(doctorId, appointmentId);
-        await this.appointmentRepo.delete(appointmentId);
-    }
-
-    async reAppointment(doctorId: number, reAppointmentId: number, newApTime: Date, newConfirmTime: Date, newNote: string): Promise<AppointmentEntity> {
-        await this.assertOwns(doctorId, reAppointmentId);
-        await this.appointmentRepo.update(
-            { id: reAppointmentId },
-            { apTime: newApTime, confirmDate: newConfirmTime, note: newNote }
-        );
-        const reAppointment = await this.appointmentRepo.findOne({
-            where: { id: reAppointmentId }
-        });
-        if (!reAppointment) throw new NotFoundException("Lịch khám không tồn tại");
-        return reAppointment;
-    }
-
     async confirmAppointment(doctorId: number, appointmentId: number, note: string, confirmDate: Date): Promise<AppointmentEntity> {
         await this.assertOwns(doctorId, appointmentId);
         await this.appointmentRepo.update(
@@ -502,10 +361,13 @@ async addWorkingTime(
             // doctorNote is the doctor's note (does NOT override the patient's note)
             { doctorNote: note ?? null, confirmCondition: 0, confirmDate: confirmDate } // 0 = đã xác nhận
         );
-        const confirmedAppointment = await this.appointmentRepo.findOne({
-            where: { id: appointmentId }
-        });
-        if (!confirmedAppointment) throw new NotFoundException("Lịch khám không tồn tại");
-        return confirmedAppointment;
+        return this.reload(appointmentId);
+    }
+
+    /** Re-read an appointment after an update. */
+    private async reload(id: number, relations: string[] = []): Promise<AppointmentEntity> {
+        const appt = await this.appointmentRepo.findOne({ where: { id }, relations });
+        if (!appt) throw new NotFoundException("Lịch khám không tồn tại");
+        return appt;
     }
 }
