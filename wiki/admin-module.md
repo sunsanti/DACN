@@ -24,7 +24,7 @@ gated `@Roles('admin')`. Admin can add doctors and view each doctor's worked hou
 - `AddDoctorScreen`: form + required avatar picker → creates a doctor account.
 - `AdminNewsScreen` (AppBar newspaper icon): list / add (title, link, cover image) / delete with confirm.
 - `AdminDiseaseScreen`: fixed exam fee (+ BHYT status) + price list, add/edit price and "BHYT chi trả", on/off switch.
-- AppBar = bell with unread badge (polled every 15 s) → `AdminNotificationsScreen` (marks read), and a menu → `AdminPaymentsScreen` (tabs Chờ xác nhận / Đã thanh toán, "Đã nhận tiền"), Bảng giá, Tin tức, Đăng xuất.
+- `AdminHomeScreen` (spec 05): bottom `NavigationBar` with 4 tabs in an `IndexedStack` — Bác sĩ & lương · `AdminPaymentsScreen` (sub-tabs Chờ xác nhận / Đã thanh toán, "Đã nhận tiền") · `AdminDiseaseScreen` · `AdminNewsScreen`. The 3 sub-screens have no AppBar of their own (only used as tabs). AppBar = title of the current tab, bell → `AdminNotificationsScreen` (marks read), separate Đăng xuất button. Unread count (polled every 15 s, refreshed on tab change / return) shows as a badge on the bell **and** on the Thanh toán tab, `99+` cap. No `NavigationRail`: `main.dart` caps the app at 560 px so a wide layout never triggers.
 - Routed when the logged-in account role is `admin` ([[ui-components]]).
 
 ## Not yet

@@ -58,57 +58,92 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     _refreshUnread();
   }
 
+  int _tab = 0;
+
+  static const _titles = ['Bác sĩ & lương', 'Thanh toán', 'Bảng giá bệnh', 'Tin tức'];
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AdminProvider>();
+    final unread = _unread > 99 ? '99+' : '$_unread';
     return Scaffold(
       appBar: AppBar(
-        title: const SessionTitle('Quản lý bác sĩ & lương'),
+        title: SessionTitle(_titles[_tab]),
         actions: [
           IconButton(
             tooltip: 'Thông báo',
             icon: Badge(
               isLabelVisible: _unread > 0,
-              label: Text('$_unread'),
+              label: Text(unread),
               child: const Icon(Icons.notifications_outlined),
             ),
             onPressed: () => _open(const AdminNotificationsScreen()),
           ),
-          PopupMenuButton<Widget>(
-            tooltip: 'Menu',
-            onSelected: _open,
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: AdminPaymentsScreen(),
-                child: ListTile(leading: Icon(Icons.point_of_sale), title: Text('Thanh toán')),
-              ),
-              const PopupMenuItem(
-                value: AdminDiseaseScreen(),
-                child: ListTile(leading: Icon(Icons.price_change_outlined), title: Text('Bảng giá bệnh')),
-              ),
-              const PopupMenuItem(
-                value: AdminNewsScreen(),
-                child: ListTile(leading: Icon(Icons.newspaper), title: Text('Tin tức')),
-              ),
-              PopupMenuItem(
-                // value null = "canceled" in Flutter, so onSelected never fires; use onTap.
-                onTap: () => context.read<AuthProvider>().logout(),
-                child: const ListTile(leading: Icon(Icons.logout), title: Text('Đăng xuất')),
-              ),
-            ],
+          IconButton(
+            tooltip: 'Đăng xuất',
+            icon: const Icon(Icons.logout),
+            onPressed: () => context.read<AuthProvider>().logout(),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AddDoctorScreen()),
-        ),
-        icon: const Icon(Icons.person_add),
-        label: const Text('Thêm bác sĩ'),
+      floatingActionButton: _tab == 0
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AddDoctorScreen()),
+              ),
+              icon: const Icon(Icons.person_add),
+              label: const Text('Thêm bác sĩ'),
+            )
+          : null,
+      // IndexedStack keeps each tab's state (scroll, sub-tab) while switching.
+      body: IndexedStack(
+        index: _tab,
+        children: [
+          RefreshIndicator(
+            onRefresh: () => context.read<AdminProvider>().load(),
+            child: _body(provider),
+          ),
+          const AdminPaymentsScreen(),
+          const AdminDiseaseScreen(),
+          const AdminNewsScreen(),
+        ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => context.read<AdminProvider>().load(),
-        child: _body(provider),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _tab,
+        onDestinationSelected: (i) {
+          setState(() => _tab = i);
+          _refreshUnread();
+        },
+        destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.groups_outlined),
+            selectedIcon: Icon(Icons.groups),
+            label: 'Bác sĩ',
+          ),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: _unread > 0,
+              label: Text(unread),
+              child: const Icon(Icons.point_of_sale_outlined),
+            ),
+            selectedIcon: Badge(
+              isLabelVisible: _unread > 0,
+              label: Text(unread),
+              child: const Icon(Icons.point_of_sale),
+            ),
+            label: 'Thanh toán',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.price_change_outlined),
+            selectedIcon: Icon(Icons.price_change),
+            label: 'Bảng giá',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.newspaper_outlined),
+            selectedIcon: Icon(Icons.newspaper),
+            label: 'Tin tức',
+          ),
+        ],
       ),
     );
   }

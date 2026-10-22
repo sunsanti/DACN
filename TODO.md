@@ -212,11 +212,11 @@ Thứ tự: (Phase 9 ∥ Phase 10) → **cổng duyệt `pre_implement/`** → (
 - [x] Kiểm tra: analyze, test (4/4), chụp → `screenshots/phase-11/` (tài khoản test chưa có lịch hẹn nên ảnh không có badge)
 
 ## Phase 12: Điều hướng admin (`admin-nav`), sau cổng duyệt
-- [ ] F12.1 Tham số `embedded` cho 3 màn con
-- [ ] F12.2 `NavigationBar` / `NavigationRail` + `IndexedStack`
-- [ ] F12.3 AppBar: tiêu đề theo tab, chuông, Đăng xuất riêng
-- [ ] F12.4 Badge chưa đọc trên chuông + mục Thanh toán (`99+`)
-- [ ] Kiểm tra: analyze, smoke webhook → badge tăng, chụp → `screenshots/phase-12/`
+- [x] F12.1 Bỏ AppBar riêng của 3 màn con (chỉ dùng làm tab nên không cần `embedded`)
+- [x] F12.2 `NavigationBar` + `IndexedStack` (bỏ Rail: app bị giới hạn 560 px)
+- [x] F12.3 AppBar: tiêu đề theo tab, chuông, Đăng xuất riêng
+- [x] F12.4 Badge chưa đọc trên chuông + mục Thanh toán (`99+`)
+- [x] Kiểm tra: analyze, test; badge kiểm bằng 3 thông báo tạm trong DB (đã xoá); chụp → `screenshots/phase-12/`
 
 ## Phase 13: Giao diện bác sĩ (`doctor-ui`), sau cổng duyệt
 - [ ] F13.1 Đầu trang + 3 thẻ thống kê

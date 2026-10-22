@@ -59,7 +59,6 @@ class _AdminNewsScreenState extends State<AdminNewsScreen> {
   Widget build(BuildContext context) {
     final news = context.watch<AdminProvider>().news;
     return Scaffold(
-      appBar: AppBar(title: const Text('Tin tức')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const _AddNewsScreen())),

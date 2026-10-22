@@ -12,15 +12,19 @@ class AdminPaymentsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A tab of AdminHomeScreen: no own AppBar. The TabBar theme is styled for the primary
+    // AppBar, so sit it on a primary strip that continues the AppBar.
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Thanh toán'),
-          bottom: const TabBar(tabs: [Tab(text: 'Chờ xác nhận'), Tab(text: 'Đã thanh toán')]),
+      child: Column(children: [
+        Material(
+          color: Theme.of(context).colorScheme.primary,
+          child: const TabBar(tabs: [Tab(text: 'Chờ xác nhận'), Tab(text: 'Đã thanh toán')]),
         ),
-        body: const TabBarView(children: [_PaymentList('pending'), _PaymentList('paid')]),
-      ),
+        const Expanded(
+          child: TabBarView(children: [_PaymentList('pending'), _PaymentList('paid')]),
+        ),
+      ]),
     );
   }
 }

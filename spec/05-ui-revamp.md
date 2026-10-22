@@ -106,10 +106,10 @@ Các bubble (hình tròn có icon, chữ bên dưới, 3 cột trên điện tho
 ### 3.4 `admin-nav`: thanh điều hướng + badge
 
 - Thay `PopupMenuButton` bằng **`NavigationBar`** (Material 3, có sẵn) gồm 4 mục: **Bác sĩ & lương** · **Thanh toán** · **Bảng giá** · **Tin tức**. Mỗi mục là một màn hình hiện có, giữ trạng thái bằng `IndexedStack`.
-- Khi chiều rộng ≥ 840 px (web/tablet), đổi sang `NavigationRail` bên trái. Đây là breakpoint chuẩn của Material, không thêm thư viện.
+- ~~Khi chiều rộng ≥ 840 px đổi sang `NavigationRail`~~ **Bỏ (2026-10-22):** `main.dart` giới hạn app rộng tối đa 560 px trên mọi nền tảng nên điều kiện này không bao giờ xảy ra. Muốn có Rail thì phải bỏ giới hạn 560 px trước.
 - AppBar còn: tiêu đề của mục đang mở, chuông thông báo, nút Đăng xuất (icon riêng, không nằm trong menu).
 - **Badge chưa đọc:** hiện **cả trên chuông và trên mục "Thanh toán"**, lấy từ `GET /admin/notifications/unread-count` (đã có, đang hỏi lại mỗi 15 s). Mở màn thông báo hay quay lại từ đó đều làm mới badge. Số lớn hơn 99 thì hiện `99+`.
-- Ba màn con hiện đang có `Scaffold` + AppBar riêng. Khi nhúng vào tab thì bỏ AppBar trùng, nhưng **vẫn mở được độc lập** bằng cách thêm tham số `embedded`.
+- Ba màn con chỉ được mở từ trang chủ admin, nên **bỏ hẳn AppBar riêng** (không thêm tham số `embedded`, vì không còn chỗ nào mở chúng độc lập).
 
 ### 3.5 `doctor-ui`: bố cục lại theo template
 

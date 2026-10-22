@@ -95,7 +95,6 @@ class _AdminDiseaseScreenState extends State<AdminDiseaseScreen> {
     final prices = context.watch<AdminProvider>().prices;
     final items = prices?.items ?? [];
     return Scaffold(
-      appBar: AppBar(title: const Text('Bảng giá bệnh')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _edit,
         icon: const Icon(Icons.add),
