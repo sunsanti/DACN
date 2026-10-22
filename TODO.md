@@ -187,9 +187,9 @@ Thứ tự: (Phase 9 ∥ Phase 10) → **cổng duyệt `pre_implement/`** → (
 - [x] Q3: dùng `@nestjs/throttler` (chỉ áp cho bhyt-lookup)
 
 ## Phase 9: Template + mockup (`ui-preview`)
-- [ ] U9.1 Tìm 2–3 template, ghi link + giấy phép vào `pre_implement/README.md`
-- [ ] U9.2 Chốt hướng chung: màu, bo góc, kiểu bubble/thẻ
-- [ ] U9.3 4 mockup PNG: patient-home, patient-register, admin-home, doctor-home
+- [x] U9.1 Tìm 2–3 template, ghi link + giấy phép vào `pre_implement/README.md`
+- [x] U9.2 Chốt hướng chung: màu, bo góc, kiểu bubble/thẻ
+- [x] U9.3 4 mockup PNG: patient-home, patient-register, admin-home, doctor-home
 - [ ] U9.4 **Bạn duyệt** → ghi "Đã duyệt" vào README
 
 ## Phase 10: Tra BHYT khi đăng ký (`register-bhyt`)

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>Doctor home mockup</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.head{background:var(--primary);color:#fff;padding:4px 16px 18px}
+.head .row{display:flex;align-items:center;gap:12px}
+.head small{opacity:.8;font-size:13px;display:block}.head b{font-size:18px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.stat{background:#ffffff1f;border-radius:12px;padding:10px 12px}
+.stat b{font-size:22px;display:block}.stat small{font-size:12px}
+.shift{display:flex;align-items:center;gap:12px;padding:14px 16px;margin:-10px 16px 0;position:relative}
+.shift .ic{width:44px;height:44px;border-radius:12px;background:var(--pc);color:var(--on-pc);display:grid;place-items:center}
+.shift div{flex:1}.shift b{font-weight:500}.shift small{display:block;color:var(--muted);font-size:13px}
+.tabs{display:flex;border-bottom:1px solid var(--ov);margin:14px 0 0;font-size:14px;font-weight:500}
+.tabs span{flex:1;text-align:center;padding:12px 0;color:var(--muted)}
+.tabs span.on{color:var(--primary);border-bottom:3px solid var(--primary)}
+.ap{padding:14px 16px;margin-top:12px}
+.ap .top{display:flex;align-items:center;gap:10px}.ap .top div{flex:1}
+.ap b{font-weight:500}.ap small{display:block;color:var(--muted);font-size:13px}
+.ap .acts{display:flex;gap:8px;margin-top:12px;align-items:center}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:28px 28px 0 0;padding:10px 0 24px;box-shadow:0 -4px 20px #0003}
+.sheet .grab{width:32px;height:4px;border-radius:2px;background:var(--ov);margin:0 auto 12px}
+.sheet .it{display:flex;gap:16px;align-items:center;padding:14px 24px;font-size:15px}
+.scrim{position:absolute;inset:0;background:#0006}
+</style></head><body>
+<script>
+const home = (extra='') => `
+<div class="phone">
+  <div class="head"><div class="status" style="padding:0 6px"><span>9:41</span><span></span></div>
+    <div class="row"><div class="avatar" style="background:#fff;color:var(--primary)">A</div>
+      <div style="flex:1"><small>Chào buổi sáng,</small><b>BS. Nguyễn Văn An</b></div>
+      <div class="ib"><span class="ms">logout</span></div></div>
+    <div class="stats"><div class="stat"><b>2</b><small>Chờ xác nhận</small></div><div class="stat"><b>3</b><small>Hôm nay</small></div><div class="stat"><b>5</b><small>Đã khám</small></div></div>
+    <div style="height:14px"></div>
+  </div>
+  <div class="card shift"><div class="ic"><span class="ms f">calendar_month</span></div><div><b>Ca làm của tôi</b><small>Hôm nay: Ca sáng 07:00–11:00</small></div><span class="ms" style="color:var(--primary)">chevron_right</span></div>
+  <div class="tabs" style="margin:14px 16px 0"><span class="on">Chờ (2)</span><span>Đã xác nhận (3)</span><span>Đã khám (5)</span></div>
+  <div class="content" style="padding-top:0">
+    <div class="card ap"><div class="top"><div class="avatar" style="width:38px;height:38px">Q</div><div><b>Dương Quân</b><small>08:30 · 25/10/2026 · 24 tuổi</small></div><span class="chip" style="background:#fff1d6;color:#8a5200">Chờ</span></div>
+      <small style="margin-top:8px">Ghi chú: Ngứa, nổi mẩn đỏ ở tay 3 ngày</small>
+      <div class="acts"><span class="btn fill"><span class="ms" style="font-size:18px">check</span>Xác nhận</span><span class="btn tonal">Chi tiết</span><span style="flex:1"></span><div class="ib"><span class="ms">more_horiz</span></div></div></div>
+    <div class="card ap"><div class="top"><div class="avatar" style="width:38px;height:38px">H</div><div><b>Phạm Thu Hà</b><small>10:00 · 25/10/2026 · 31 tuổi</small></div><span class="chip" style="background:#fff1d6;color:#8a5200">Chờ</span></div>
+      <div class="acts"><span class="btn fill"><span class="ms" style="font-size:18px">check</span>Xác nhận</span><span class="btn tonal">Chi tiết</span><span style="flex:1"></span><div class="ib"><span class="ms">more_horiz</span></div></div></div>
+  </div>
+  ${extra}
+</div>`;
+document.write('<div>'+home()+'<div class="cap">Bác sĩ: đầu trang có thống kê, "Ca làm của tôi" thành thẻ lớn bấm 1 chạm</div></div>');
+document.write('<div>'+home(`<div class="scrim"></div><div class="sheet"><div class="grab"></div>
+  <div class="it"><span class="ms">event_repeat</span>Dời lịch</div>
+  <div class="it"><span class="ms">replay</span>Tái khám</div>
+  <div class="it"><span class="ms">smart_toy</span>Báo cáo AI</div>
+  <div class="it" style="color:var(--error)"><span class="ms">person_off</span>Không nhận bệnh</div>
+  <div class="it" style="color:var(--error)"><span class="ms">cancel</span>Hủy lịch</div></div>`)+'<div class="cap">Nút "⋯": hành động phụ gom vào bottom sheet (nút đỏ vẫn hỏi lý do)</div></div>');
+</script>
+</body></html>
