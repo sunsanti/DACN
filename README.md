@@ -95,6 +95,22 @@ flutter pub get
 
 Với điện thoại thật: lấy IP LAN của Mac bằng `ipconfig getifaddr en0`. iPhone cần bật **Chế độ nhà phát triển**, chọn Team ký app trong Xcode (`ios/Runner.xcworkspace`), và cho phép quyền **Mạng cục bộ** khi app hỏi.
 
+### 6. Điện thoại khác Wi-Fi + nhận webhook SePay (ngrok)
+
+ngrok mở cổng `:3000` của máy ra internet. Điện thoại ở bất kỳ mạng nào cũng gọi được API, và SePay gọi được webhook báo tiền về.
+
+```bash
+brew install ngrok
+ngrok config add-authtoken <token ở dashboard.ngrok.com>     # lần đầu
+ngrok http 3000                                               # hoặc --url=<domain-tĩnh>.ngrok-free.app để địa chỉ không đổi
+```
+
+1. Chạy app với địa chỉ ngrok: `flutter run --dart-define=API_BASE=https://<id>.ngrok-free.app`
+2. SePay → **Tích hợp WebHooks**: URL `https://<id>.ngrok-free.app/payments/sepay-webhook`, chứng thực **API Key** = `SEPAY_API_KEY` trong `backend/.env`. Tài khoản nhận tiền phải được liên kết với SePay.
+3. Chuyển **đúng số tiền**, giữ nguyên nội dung `DACN<số lịch>`. Tiền về → lịch tự chuyển "đã thanh toán", app hiện màn thành công trong khoảng 3 giây.
+
+Webhook chỉ tới được khi máy đang chạy cả backend lẫn ngrok. Địa chỉ ngrok ngẫu nhiên đổi mỗi lần chạy lại ngrok (dùng domain tĩnh để tránh phải sửa lại SePay). Flutter web nên dùng `localhost`.
+
 ### Tài khoản
 
 - **Admin** (có sẵn): `admin@dacn.local` / `Admin@123`
@@ -125,7 +141,8 @@ cd ../frontend && flutter analyze && flutter test
 |---|---|
 | API không kết nối được DB | `docker start my-postgres`, kiểm tra `DB_*` trong `backend/.env` |
 | `relation ... does not exist` / thiếu cột | `npm run typeorm migration:run` |
-| Điện thoại không gọi được API | Cùng Wi-Fi? Mở thử `http://<IP>:3000/api` trên trình duyệt điện thoại |
+| Điện thoại không gọi được API | Cùng Wi-Fi? Mở thử `http://<IP>:3000/api` trên trình duyệt điện thoại; khác Wi-Fi thì dùng ngrok (mục 6) |
+| Đã chuyển khoản QR nhưng app không chuyển màn | Webhook SePay không tới backend: kiểm tra ngrok đang chạy và URL webhook trong SePay đúng (mục 6). Tạm thời admin bấm "Đã nhận tiền" |
 | Web hiện bản cũ | Tải lại bằng Cmd+Shift+R (Flutter web có cache) |
 | AI báo `Lỗi gọi Gemini: 503` | Gemini quá tải, thử lại sau; kiểm tra `GEMINI_API_KEY` |
 
