@@ -38,17 +38,13 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
     }
   }
 
-  void _toast(String m) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
-  }
 
   Future<void> _register() async {
     List<ShiftTemplate> templates;
     try {
       templates = await _service.shiftTemplates();
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
       return;
     }
     if (!mounted) return;
@@ -74,33 +70,33 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
       helpText: 'Chọn ngày làm ca',
     );
     if (date == null) return;
-    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final dateStr = fmtYmd(date);
     try {
       await _service.registerShift(picked.id, dateStr);
-      _toast('Đã đăng ký ca ${picked.typeLabel} ngày $dateStr');
+      toast('Đã đăng ký ca ${picked.typeLabel} ngày $dateStr');
       await _load();
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
     }
   }
 
   Future<void> _cancel(ShiftAssignment s) async {
     try {
       await _service.cancelAssignment(s.id);
-      _toast('Đã huỷ ca #${s.id}');
+      toast('Đã huỷ ca #${s.id}');
       await _load();
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
     }
   }
 
   Future<void> _delete(ShiftAssignment s) async {
     try {
       await _service.deleteAssignment(s.id);
-      _toast('Đã xoá ca #${s.id}');
+      toast('Đã xoá ca #${s.id}');
       await _load();
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
     }
   }
 

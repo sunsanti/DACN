@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { PatientModule } from './patient/patient.module';
 import { DoctorModule } from './doctor/doctor.module';
 import { DatabaseModule } from './database/database.module';
@@ -30,14 +28,10 @@ import { RolesGuard } from './common/guards/roles.guard';
     BillingModule,
     PaymentModule,
   ],
-  controllers: [AppController],
   providers: [
-    AppService,
     // Order matters: JwtAuthGuard runs first (sets req.user), then RolesGuard.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
-
-
 export class AppModule {}

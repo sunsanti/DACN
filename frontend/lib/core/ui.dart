@@ -7,12 +7,72 @@ import 'package:provider/provider.dart';
 import '../config/api_config.dart';
 import '../models/appointment.dart';
 import '../providers/auth_provider.dart';
+import '../services/appointment_service.dart';
+import 'dio_client.dart';
 
 String _two(int n) => n.toString().padLeft(2, '0');
 
 String fmtDate(DateTime d) => '${_two(d.day)}/${_two(d.month)}/${d.year}';
 String fmtTime(DateTime d) => '${_two(d.hour)}:${_two(d.minute)}';
 String fmtDateTime(DateTime d) => '${fmtDate(d)} ${fmtTime(d)}';
+
+/// API date format: yyyy-MM-dd.
+String fmtYmd(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
+
+void _snack(BuildContext context, String msg) =>
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
+extension StateToast on State {
+  /// Short SnackBar message; no-op once the screen is gone.
+  void toast(String msg) {
+    if (mounted) _snack(context, msg);
+  }
+}
+
+/// Pick a date (next 90 days), then one of [doctorId]'s free 30-min slots.
+/// Null when cancelled or nothing is free (the user already got a toast).
+Future<DateTime?> pickFreeSlot(
+  BuildContext context,
+  int doctorId, {
+  required String dateHelp,
+  required String noSlotMsg,
+}) async {
+  final now = DateTime.now();
+  final date = await showDatePicker(
+    context: context,
+    initialDate: now,
+    firstDate: now,
+    lastDate: now.add(const Duration(days: 90)),
+    helpText: dateHelp,
+  );
+  if (date == null || !context.mounted) return null;
+  List<DateTime> slots;
+  try {
+    slots = await AppointmentService().availability(doctorId, fmtYmd(date));
+  } catch (e) {
+    if (context.mounted) _snack(context, DioClient.messageFrom(e));
+    return null;
+  }
+  if (!context.mounted) return null;
+  if (slots.isEmpty) {
+    _snack(context, noSlotMsg);
+    return null;
+  }
+  return showDialog<DateTime>(
+    context: context,
+    builder: (ctx) => SimpleDialog(
+      title: const Text('Chọn khung giờ mới'),
+      children: [
+        for (final s in slots)
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, s),
+            child: Text('${s.day}/${s.month} — ${fmtTime(s)}'),
+          ),
+      ],
+    ),
+  );
+}
+
 /// 1234567 → "1.234.567 đ".
 String fmtMoney(int v) {
   final s = v.abs().toString();

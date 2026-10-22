@@ -1,6 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { AppointmentEntity } from "./appointment.entity";
-import { Appointment } from "../dto/appointment.dto";
 
 @Entity('patient')
 export class PatientEntity {

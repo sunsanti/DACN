@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
-describe('AppController (e2e)', () => {
+describe('Global auth guard (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
@@ -16,9 +16,8 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/hello (GET) is protected by the global auth guard', () => {
-    // After F01 a global JwtAuthGuard protects every non-@Public route.
-    return request(app.getHttpServer()).get('/hello').expect(401);
+  it('non-@Public routes are protected by the global auth guard', () => {
+    return request(app.getHttpServer()).get('/patient/me').expect(401);
   });
 
   afterEach(async () => {

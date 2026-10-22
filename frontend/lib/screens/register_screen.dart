@@ -64,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _bhytError = false;
       });
       try {
-        final r = await AuthService().bhytLookup(_cccd.text, _birthDate.toIso8601String().split('T').first);
+        final r = await AuthService().bhytLookup(_cccd.text, fmtYmd(_birthDate));
         if (!mounted || seq != _lookupSeq) return;
         setState(() => _bhyt = r);
       } catch (_) {
@@ -99,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             name: _name.text.trim(),
             gender: _gender,
             age: int.tryParse(_age.text) ?? 0,
-            birthDate: _birthDate.toIso8601String().split('T').first,
+            birthDate: fmtYmd(_birthDate),
             phone: _phone.text.trim(),
             address: _address.text.trim(),
             avatar: _avatar,
