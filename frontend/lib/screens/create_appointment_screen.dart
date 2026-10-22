@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/dio_client.dart';
+import '../core/ui.dart';
 import '../models/doctor.dart';
 import '../providers/appointment_provider.dart';
 import '../services/appointment_service.dart';
@@ -149,11 +150,30 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
                         child: Text('Không tải được danh sách bác sĩ: $_loadError',
                             style: const TextStyle(color: Colors.red)),
                       ),
+                    if (_selectedDoctor != null) ...[
+                      Center(
+                        child: UserAvatar(
+                            avatarUrl: _selectedDoctor!.avatar, name: _selectedDoctor!.name, radius: 40),
+                      ),
+                      const SizedBox(height: 6),
+                      Text('BS. ${_selectedDoctor!.name}',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 16),
+                    ],
                     DropdownButtonFormField<Doctor>(
                       initialValue: _selectedDoctor,
-                      decoration: const InputDecoration(labelText: 'Bác sĩ', border: OutlineInputBorder()),
+                      isExpanded: true, // items hold a Row+Flexible; needs a bounded width
+                      decoration: const InputDecoration(labelText: 'Bác sĩ'),
                       items: _doctors
-                          .map((d) => DropdownMenuItem(value: d, child: Text('BS. ${d.name} (#${d.id})')))
+                          .map((d) => DropdownMenuItem(
+                                value: d,
+                                child: Row(children: [
+                                  UserAvatar(avatarUrl: d.avatar, name: d.name, radius: 14),
+                                  const SizedBox(width: 10),
+                                  Flexible(child: Text('BS. ${d.name} (#${d.id})', overflow: TextOverflow.ellipsis)),
+                                ]),
+                              ))
                           .toList(),
                       onChanged: (d) {
                         setState(() => _selectedDoctor = d);
@@ -186,7 +206,7 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _address,
-                      decoration: const InputDecoration(labelText: 'Địa chỉ khám', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'Địa chỉ khám'),
                       validator: (v) => (v == null || v.trim().isEmpty) ? 'Nhập địa chỉ' : null,
                     ),
                     const SizedBox(height: 16),
@@ -194,7 +214,7 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
                       controller: _note,
                       maxLines: 3,
                       decoration: const InputDecoration(
-                          labelText: 'Ghi chú / triệu chứng (tuỳ chọn)', border: OutlineInputBorder()),
+                          labelText: 'Ghi chú / triệu chứng (tuỳ chọn)'),
                     ),
                     const SizedBox(height: 24),
                     FilledButton(

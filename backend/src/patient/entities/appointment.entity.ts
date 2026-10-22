@@ -1,6 +1,7 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { PatientEntity } from "./patient.entity";
 import { DoctorEntity } from "../../doctor/entities/doctor.entity";
+import { AppointmentItemEntity } from "./appointment_item.entity";
 
 @Entity('appointment')
 export class AppointmentEntity {
@@ -37,6 +38,44 @@ export class AppointmentEntity {
 
     @Column()
     doctorName: string;
+
+    // Hoá đơn (snapshot lúc bác sĩ hoàn thành khám). NULL = chưa có hoá đơn.
+    @Column({ type: 'int', nullable: true })
+    examFee: number | null;
+
+    @Column({ type: 'int', nullable: true })
+    total: number | null;
+
+    @Column({ type: 'real', nullable: true })
+    insuranceRate: number | null; // 0 / 0.8 / 0.95 / 1
+
+    @Column({ type: 'int', nullable: true })
+    insuranceCovered: number | null;
+
+    @Column({ type: 'int', nullable: true })
+    payable: number | null;
+
+    @Column({ type: 'boolean', nullable: true })
+    examFeeCovered: boolean | null; // phí khám có được BHYT trả (snapshot)
+
+    @Column({ type: 'varchar', length: 15, nullable: true })
+    insuranceCardNumber: string | null; // mã thẻ BHYT đã dùng (snapshot)
+
+    // Thanh toán: unpaid → pending (bệnh nhân chọn cash/qr) → paid (webhook SePay / admin)
+    @Column({ type: 'varchar', nullable: true })
+    paymentMethod: 'cash' | 'qr' | null;
+
+    @Column({ type: 'varchar', default: 'unpaid' })
+    paymentStatus: 'unpaid' | 'pending' | 'paid';
+
+    @Column({ type: 'timestamp', nullable: true })
+    paidAt: Date | null;
+
+    @Column({ type: 'int', nullable: true })
+    paidBy: number | null; // account admin xác nhận; null = webhook / tự động
+
+    @OneToMany(() => AppointmentItemEntity, (i) => i.appointment)
+    items: AppointmentItemEntity[];
 
     @ManyToOne(() => PatientEntity, (patient) => patient.appointments)
     patient: PatientEntity;

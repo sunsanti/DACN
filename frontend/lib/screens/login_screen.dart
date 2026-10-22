@@ -44,8 +44,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Đăng nhập')),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -54,19 +54,29 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.medical_services, size: 64, color: Colors.blue),
-                const SizedBox(height: 24),
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: scheme.primaryContainer,
+                  child: Icon(Icons.local_hospital, size: 44, color: scheme.primary),
+                ),
+                const SizedBox(height: 16),
+                Text('DACN Clinic',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text('Đặt lịch khám & chẩn đoán sơ bộ bằng AI',
+                    style: TextStyle(color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 32),
                 TextFormField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
                   validator: (v) => (v == null || !v.contains('@')) ? 'Email không hợp lệ' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _password,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Mật khẩu', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: 'Mật khẩu', prefixIcon: Icon(Icons.lock_outline)),
                   validator: (v) => (v == null || v.isEmpty) ? 'Nhập mật khẩu' : null,
                 ),
                 const SizedBox(height: 24),

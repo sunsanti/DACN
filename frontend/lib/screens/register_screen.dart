@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import 'package:flutter/services.dart';
 import '../core/dio_client.dart';
+import '../core/ui.dart';
 import '../providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -22,12 +25,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _gender = 'male';
   DateTime _birthDate = DateTime(2000, 1, 1);
   bool _submitting = false;
+  XFile? _avatar; // tuỳ chọn
+  final _cccd = TextEditingController(); // bắt buộc, 12 số
 
   @override
   void dispose() {
     for (final c in [_email, _password, _name, _age, _phone, _address]) {
       c.dispose();
     }
+    _cccd.dispose();
     super.dispose();
   }
 
@@ -44,6 +50,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             birthDate: _birthDate.toIso8601String().split('T').first,
             phone: _phone.text.trim(),
             address: _address.text.trim(),
+            avatar: _avatar,
+            cccd: _cccd.text.trim(),
           );
       if (mounted) Navigator.of(context).pop(); // AuthGate handles the rest
     } catch (e) {
@@ -67,12 +75,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
           key: _formKey,
           child: Column(
             children: [
+              AvatarPicker(onChanged: (f) => _avatar = f),
+              const SizedBox(height: 16),
               _field(_email, 'Email', keyboard: TextInputType.emailAddress,
                   validator: (v) => (v == null || !v.contains('@')) ? 'Email không hợp lệ' : null),
               _field(_password, 'Mật khẩu (≥ 6 ký tự)', obscure: true,
                   validator: (v) => (v == null || v.length < 6) ? 'Tối thiểu 6 ký tự' : null),
               _field(_name, 'Họ tên', validator: _required),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextFormField(
+                  controller: _cccd,
+                  keyboardType: TextInputType.number,
+                  maxLength: 12,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                    labelText: 'Số CCCD',
+                    helperText: 'Dùng để tra thẻ BHYT. Không sửa được sau khi đăng ký',
+                  ),
+                  validator: (v) => RegExp(r'^\d{12}$').hasMatch(v ?? '') ? null : 'CCCD gồm đúng 12 chữ số',
+                ),
+              ),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: _field(_age, 'Tuổi', keyboard: TextInputType.number,
@@ -82,7 +107,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       initialValue: _gender,
-                      decoration: const InputDecoration(labelText: 'Giới tính', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'Giới tính'),
                       items: const [
                         DropdownMenuItem(value: 'male', child: Text('Nam')),
                         DropdownMenuItem(value: 'female', child: Text('Nữ')),
@@ -93,13 +118,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              ListTile(
-                shape: RoundedRectangleBorder(
-                  side: const BorderSide(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                title: Text('Ngày sinh: ${_birthDate.toIso8601String().split('T').first}'),
-                trailing: const Icon(Icons.calendar_today),
+              InkWell(
+                borderRadius: BorderRadius.circular(14),
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
@@ -109,10 +129,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   );
                   if (picked != null) setState(() => _birthDate = picked);
                 },
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Ngày sinh',
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  child: Text(fmtDate(_birthDate)),
+                ),
               ),
+              const SizedBox(height: 12),
               _field(_phone, 'Số điện thoại', keyboard: TextInputType.phone, validator: _required),
               _field(_address, 'Địa chỉ', validator: _required),
-              const SizedBox(height: 24),
+              const SizedBox(height: 4),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
@@ -144,7 +172,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         controller: c,
         obscureText: obscure,
         keyboardType: keyboard,
-        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+        decoration: InputDecoration(labelText: label),
         validator: validator,
       ),
     );

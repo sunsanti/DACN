@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/billing_ui.dart';
 import '../core/dio_client.dart';
 import '../core/reason_dialog.dart';
+import '../core/ui.dart';
 import '../models/appointment.dart';
 import '../providers/appointment_provider.dart';
 import '../services/appointment_service.dart';
 import 'ai_report_screen.dart';
 import 'create_appointment_screen.dart';
+import 'payment_screen.dart';
 
 class AppointmentDetailScreen extends StatefulWidget {
   final int appointmentId;
@@ -132,10 +135,31 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: UserAvatar(avatarUrl: a.doctorAvatar, name: a.doctorName, radius: 26),
+          title: Text('BS. ${a.doctorName}', style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: const Text('Bác sĩ phụ trách'),
+        ),
         _row('Thời gian', _fmt(a.apTime)),
-        _row('Bác sĩ', a.doctorName),
         _row('Địa chỉ', a.address),
         _row('Trạng thái', a.statusLabel),
+        if (a.hasBill) ...[
+          const SizedBox(height: 8),
+          BillCard(a),
+          if (!a.isPaid && (a.payable ?? 0) > 0) ...[
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              icon: const Icon(Icons.payment),
+              label: Text(a.isPaymentPending ? 'Xem / đổi phương thức thanh toán' : 'Thanh toán'),
+              onPressed: () async {
+                await Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => PaymentScreen(appointment: a)));
+                _load(); // status may have changed
+              },
+            ),
+          ],
+        ],
         const Divider(height: 24),
         _row('Ghi chú của bạn', (a.note == null || a.note!.isEmpty) ? '—' : a.note!),
         _row('Ghi chú bác sĩ', (a.doctorNote == null || a.doctorNote!.isEmpty) ? '—' : a.doctorNote!),

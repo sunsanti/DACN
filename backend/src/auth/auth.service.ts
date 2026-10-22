@@ -28,7 +28,7 @@ export class AuthService {
     ) {}
 
     /** Admin-only: create a doctor record + linked account (role=doctor). */
-    async registerDoctor(dto: RegisterDoctorDTO) {
+    async registerDoctor(dto: RegisterDoctorDTO, avatar: string) {
         const exists = await this.accountRepo.findOne({ where: { email: dto.email } });
         if (exists) throw new ConflictException("Email đã tồn tại");
 
@@ -40,6 +40,7 @@ export class AuthService {
             phone: dto.phone,
             address: dto.address,
             email: dto.email,
+            avatar,
         });
 
         const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -55,9 +56,11 @@ export class AuthService {
     }
 
     /** Self-service patient registration: creates a patient record + linked account. */
-    async register(dto: RegisterDTO) {
+    async register(dto: RegisterDTO, avatar = "") {
         const exists = await this.accountRepo.findOne({ where: { email: dto.email } });
         if (exists) throw new ConflictException("Email đã tồn tại");
+        const cccdTaken = await this.patientRepo.exists({ where: { cccd: dto.cccd } });
+        if (cccdTaken) throw new ConflictException("CCCD đã được đăng ký");
 
         const patient = await this.patientRepo.save({
             name: dto.name,
@@ -68,7 +71,8 @@ export class AuthService {
             phone: dto.phone,
             address: dto.address,
             createAt: new Date(),
-            avatar: "",
+            avatar,
+            cccd: dto.cccd,
         });
 
         const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -101,11 +105,14 @@ export class AuthService {
             patientId: account.patient?.id,
             doctorId: account.doctor?.id,
         };
+        const profile = account.patient ?? account.doctor;
         return {
             accessToken: this.jwt.sign(payload),
             role: payload.role,
             patientId: payload.patientId,
             doctorId: payload.doctorId,
+            name: profile?.name ?? "Admin",
+            avatarUrl: profile?.avatar || null,
         };
     }
 }

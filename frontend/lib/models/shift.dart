@@ -56,6 +56,7 @@ class ShiftAssignment {
   });
 
   bool get isActive => status == 'ACTIVE';
+  String get statusLabel => const {'ACTIVE': 'Hoạt động', 'CANCELED': 'Đã hủy', 'REPLACED': 'Đã thay thế'}[status] ?? status;
   String get typeLabel => shiftTypeLabel(type);
 
   String get dateLabel =>

@@ -9,6 +9,10 @@ import { DatabaseModule } from './database/database.module';
 import { AiModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
+import { NewsModule } from './news/news.module';
+import { DiseaseModule } from './disease/disease.module';
+import { PaymentModule } from './payment/payment.module';
+import { BillingModule } from './billing/billing.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -21,6 +25,10 @@ import { RolesGuard } from './common/guards/roles.guard';
     DatabaseModule,
     AiModule,
     AdminModule,
+    NewsModule,
+    DiseaseModule,
+    BillingModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [

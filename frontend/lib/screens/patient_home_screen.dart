@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/news_ui.dart';
+import '../core/ui.dart';
 import '../models/appointment.dart';
+import '../models/news.dart';
 import '../providers/appointment_provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/news_service.dart';
 import 'create_appointment_screen.dart';
 import 'ai_report_screen.dart';
 import 'appointment_detail_screen.dart';
@@ -17,12 +21,23 @@ class PatientHomeScreen extends StatefulWidget {
 }
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
+  List<News> _news = []; // empty or failed → news blocks are hidden
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppointmentProvider>().load();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  Future<void> _refresh() async {
+    final appts = context.read<AppointmentProvider>().load();
+    try {
+      final news = await NewsService().list(limit: 20);
+      if (mounted) setState(() => _news = news);
+    } catch (_) {
+      // tin tức là phụ: lỗi thì ẩn, không chặn lịch khám
+    }
+    await appts;
   }
 
   @override
@@ -31,7 +46,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lịch khám của tôi'),
+        title: const SessionTitle('Lịch khám của tôi'),
         actions: [
           IconButton(
             tooltip: 'Hồ sơ',
@@ -55,80 +70,94 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         label: const Text('Đặt lịch'),
       ),
       body: RefreshIndicator(
-        onRefresh: () => context.read<AppointmentProvider>().load(),
+        onRefresh: _refresh,
         child: _body(provider),
       ),
     );
   }
 
   Widget _body(AppointmentProvider provider) {
-    if (provider.loading && provider.appointments.isEmpty) {
+    if (provider.loading && provider.appointments.isEmpty && _news.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (provider.error != null && provider.appointments.isEmpty) {
-      return ListView(
-        children: [
-          const SizedBox(height: 120),
-          Center(child: Text('Lỗi tải dữ liệu:\n${provider.error}', textAlign: TextAlign.center)),
+    final outline = Theme.of(context).colorScheme.outline;
+    Widget message(IconData icon, String text) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 32),
+          child: Column(children: [
+            Icon(icon, size: 48, color: outline),
+            const SizedBox(height: 8),
+            Text(text, textAlign: TextAlign.center, style: TextStyle(color: outline)),
+          ]),
+        );
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      children: [
+        if (_news.isNotEmpty) ...[
+          NewsCarousel(_news.take(5).toList()),
+          const SizedBox(height: 20),
+          _sectionTitle('Lịch khám của tôi'),
         ],
-      );
-    }
-    if (provider.appointments.isEmpty) {
-      return ListView(
-        children: const [
-          SizedBox(height: 120),
-          Center(child: Text('Chưa có lịch khám.\nNhấn "Đặt lịch" để tạo.', textAlign: TextAlign.center)),
+        if (provider.error != null && provider.appointments.isEmpty)
+          message(Icons.cloud_off, 'Lỗi tải dữ liệu:\n${provider.error}')
+        else if (provider.appointments.isEmpty)
+          message(Icons.event_available, 'Chưa có lịch khám.\nNhấn "Đặt lịch" để tạo.')
+        else
+          for (final a in provider.appointments)
+            Padding(padding: const EdgeInsets.only(bottom: 12), child: _tile(a)),
+        if (_news.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _sectionTitle('Tin tức sức khoẻ'),
+          for (final n in _news) NewsTile(n),
         ],
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      itemCount: provider.appointments.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (_, i) => _tile(provider.appointments[i]),
+      ],
     );
   }
 
+  Widget _sectionTitle(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+      );
+
   Widget _tile(Appointment a) {
-    final d = a.apTime;
-    final dateStr =
-        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} '
-        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    final scheme = Theme.of(context).colorScheme;
     return Card(
-      child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.event)),
-        title: Text('BS. ${a.doctorName} — $dateStr'),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Địa chỉ: ${a.address}'),
-            if (a.note != null && a.note!.isNotEmpty) Text('Ghi chú: ${a.note}'),
-            if (a.doctorNote != null && a.doctorNote!.isNotEmpty)
-              Text('BS: ${a.doctorNote}', style: const TextStyle(color: Colors.blue)),
-            Text('Trạng thái: ${a.statusLabel}',
-                style: TextStyle(
-                    color: a.isCanceled
-                        ? Colors.red
-                        : a.isConfirmed
-                            ? Colors.green
-                            : a.isExamined
-                                ? Colors.blue
-                                : Colors.orange)),
-            if (a.isCanceled && a.cancelReason != null)
-              Text('Lý do hủy: ${a.cancelReason}', style: const TextStyle(color: Colors.red, fontSize: 12)),
-          ],
-        ),
-        trailing: a.isCanceled
-            ? null
-            : IconButton(
-                tooltip: 'Gửi ảnh + triệu chứng cho AI',
-                icon: const Icon(Icons.smart_toy),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => AiReportScreen(appointment: a)),
-                ),
-              ),
+      child: InkWell(
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => AppointmentDetailScreen(appointmentId: a.id)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('BS. ${a.doctorName}',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  ),
+                  StatusChip(a),
+                  if (!a.isCanceled)
+                    IconButton(
+                      tooltip: 'Gửi ảnh + triệu chứng cho AI',
+                      icon: Icon(Icons.smart_toy_outlined, color: scheme.primary),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => AiReportScreen(appointment: a)),
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 8),
+                ],
+              ),
+              InfoLine(Icons.schedule, '${fmtTime(a.apTime)}  ·  ${fmtDate(a.apTime)}'),
+              InfoLine(Icons.place_outlined, a.address),
+              if (a.note != null && a.note!.isNotEmpty) InfoLine(Icons.notes, a.note!),
+              if (a.doctorNote != null && a.doctorNote!.isNotEmpty)
+                InfoLine(Icons.medical_information_outlined, 'BS: ${a.doctorNote}', color: scheme.primary),
+              if (a.isCanceled && a.cancelReason != null)
+                InfoLine(Icons.info_outline, 'Lý do hủy: ${a.cancelReason}', color: Colors.red.shade700),
+            ],
+          ),
         ),
       ),
     );

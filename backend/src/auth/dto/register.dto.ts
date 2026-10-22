@@ -1,6 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { Transform, Type } from "class-transformer";
 import {
     IsDateString,
+    Matches,
     IsEmail,
     IsInt,
     IsString,
@@ -8,6 +10,12 @@ import {
 } from "class-validator";
 
 export class RegisterDTO {
+    /** CCCD 12 số (bắt buộc). BHYT được tra theo CCCD trong danh bạ, bệnh nhân không tự khai thẻ. */
+    @ApiProperty({ example: "079203000111" })
+    @Transform(({ value }: { value: unknown }) => (typeof value === "string" ? value.replace(/\s+/g, "") : value))
+    @Matches(/^\d{12}$/, { message: "CCCD phải gồm đúng 12 chữ số" })
+    cccd: string;
+
     @ApiProperty({ example: "patient@dacn.local" })
     @IsEmail()
     email: string;
@@ -26,6 +34,7 @@ export class RegisterDTO {
     gender: string;
 
     @ApiProperty({ example: 20 })
+    @Type(() => Number) // multipart gửi mọi field dạng string
     @IsInt()
     age: number;
 

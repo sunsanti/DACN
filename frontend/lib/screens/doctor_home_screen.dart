@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../core/dio_client.dart';
 import '../core/pdf_opener.dart';
 import '../core/reason_dialog.dart';
+import '../core/billing_ui.dart';
+import '../core/ui.dart';
 import '../models/appointment.dart';
 import '../providers/auth_provider.dart';
 import '../providers/doctor_provider.dart';
@@ -30,13 +32,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     });
   }
 
-  String _fmt(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} '
-      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-
   Future<void> _confirm(Appointment a) async {
     final provider = context.read<DoctorProvider>();
-    final noteCtrl = TextEditingController(text: a.note ?? '');
+    final noteCtrl = TextEditingController(text: a.doctorNote ?? '');
     DateTime confirmDate = DateTime.now();
     final ok = await showDialog<bool>(
       context: context,
@@ -128,8 +126,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
   Future<void> _complete(Appointment a) async {
     final provider = context.read<DoctorProvider>();
+    final ids = await pickDiseases(context);
+    if (ids == null) return;
     try {
-      await provider.complete(a.id);
+      await provider.complete(a.id, ids);
       _toast('Đã đánh dấu khám xong lịch #${a.id}');
     } catch (e) {
       _toast(DioClient.messageFrom(e));
@@ -137,13 +137,14 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   }
 
   Future<void> _reExam(Appointment a) async {
-    if (a.patientId == null) {
+    if (a.patientId == null || a.doctorId == null) {
       _toast('Thiếu thông tin bệnh nhân');
       return;
     }
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ReExaminationScreen(
+          doctorId: a.doctorId!,
           patientId: a.patientId!,
           patientName: a.patientName,
           defaultAddress: a.address,
@@ -174,7 +175,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Bác sĩ — Lịch hẹn'),
+          title: const SessionTitle('Lịch hẹn của tôi'),
           actions: [
             IconButton(
               tooltip: 'Ca trực',
@@ -215,11 +216,11 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     return RefreshIndicator(
       onRefresh: () => context.read<DoctorProvider>().load(),
       child: items.isEmpty
-          ? ListView(children: const [SizedBox(height: 120), Center(child: Text('Trống'))])
+          ? const EmptyState(Icons.inbox_outlined, 'Không có lịch hẹn nào')
           : ListView.separated(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (_, i) => _tile(items[i]),
             ),
     );
@@ -232,18 +233,26 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           MaterialPageRoute(builder: (_) => DoctorAppointmentDetailScreen(appointmentId: a.id)),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Lịch #${a.id} — ${_fmt(a.apTime)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text('Bệnh nhân: ${a.patientName}'),
-              Text('Địa chỉ: ${a.address}'),
-              if (a.note != null && a.note!.isNotEmpty) Text('Ghi chú: ${a.note}'),
-              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(a.patientName,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  ),
+                  StatusChip(a),
+                ],
+              ),
+              InfoLine(Icons.schedule, '${fmtDateTime(a.apTime)}  ·  Lịch #${a.id}'),
+              InfoLine(Icons.place_outlined, a.address),
+              if (a.note != null && a.note!.isNotEmpty) InfoLine(Icons.notes, a.note!),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: [
                   if (a.isPending)
                     FilledButton.tonalIcon(

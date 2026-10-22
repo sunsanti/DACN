@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/dio_client.dart';
 import '../core/shift_ui.dart';
+import '../core/ui.dart';
 import '../models/shift.dart';
 import '../services/doctor_service.dart';
 import 'shift_overview_screen.dart';
@@ -151,7 +152,7 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
         leading: Icon(shiftIcon(s.type),
             color: canceled ? Colors.grey : Colors.orange),
         title: Text('Ca ${s.typeLabel} — ${s.dateLabel}'),
-        subtitle: Text('${s.timeLabel} · ${s.duration.toStringAsFixed(1)}h · ${s.status}',
+        subtitle: Text('${s.timeLabel} · ${fmtHours(s.duration)} · ${s.statusLabel}',
             style: TextStyle(color: s.isActive ? Colors.green : Colors.grey)),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

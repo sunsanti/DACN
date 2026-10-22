@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/dio_client.dart';
+import '../core/ui.dart';
 import '../providers/admin_provider.dart';
 import '../services/admin_service.dart';
 
@@ -26,6 +27,8 @@ class _AdminDoctorDetailScreenState extends State<AdminDoctorDetailScreen> {
   bool _saving = false;
   String? _error;
 
+  String? _avatar;
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +46,7 @@ class _AdminDoctorDetailScreenState extends State<AdminDoctorDetailScreen> {
   Future<void> _load() async {
     try {
       final d = await _service.getDoctor(widget.doctorId);
+      _avatar = d.avatar;
       _name.text = d.name;
       _age.text = d.age.toString();
       _phone.text = d.phone;
@@ -93,7 +97,7 @@ class _AdminDoctorDetailScreenState extends State<AdminDoctorDetailScreen> {
       child: TextFormField(
         controller: c,
         keyboardType: kb,
-        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+        decoration: InputDecoration(labelText: label),
         validator: validator,
       ),
     );
@@ -113,9 +117,12 @@ class _AdminDoctorDetailScreenState extends State<AdminDoctorDetailScreen> {
                     key: _formKey,
                     child: Column(
                       children: [
+                        UserAvatar(avatarUrl: _avatar, name: _name.text, radius: 44),
+                        const SizedBox(height: 16),
                         _field(_name, 'Họ tên',
                             validator: (v) => (v == null || v.trim().isEmpty) ? 'Bắt buộc' : null),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: _field(_age, 'Tuổi', kb: TextInputType.number,
@@ -125,7 +132,7 @@ class _AdminDoctorDetailScreenState extends State<AdminDoctorDetailScreen> {
                             Expanded(
                               child: DropdownButtonFormField<String>(
                                 initialValue: _gender,
-                                decoration: const InputDecoration(labelText: 'Giới tính', border: OutlineInputBorder()),
+                                decoration: const InputDecoration(labelText: 'Giới tính'),
                                 items: const [
                                   DropdownMenuItem(value: 'male', child: Text('Nam')),
                                   DropdownMenuItem(value: 'female', child: Text('Nữ')),

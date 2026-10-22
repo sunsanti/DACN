@@ -32,6 +32,9 @@ export class DoctorEntity {
     @Column()
     email: string;
 
+    @Column({ default: '' })
+    avatar: string; // /uploads/avatars/<uuid>.jpg, '' = chưa có ảnh
+
     @OneToMany(() => AppointmentEntity, (appointments) => appointments.doctor)
     appointments: AppointmentEntity[];
 

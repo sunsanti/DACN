@@ -1,8 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { IDoctorService } from "./interfaces/doctor_service.interface";
 import { DoctorEntity } from "./entities/doctor.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Between, IsNull, Repository } from "typeorm";
+import { Between, In, IsNull, Repository } from "typeorm";
 import { ShiftEntity } from "./entities/shift.entity";
 import { AppointmentEntity } from "../patient/entities/appointment.entity";
 import { PatientEntity } from "../patient/entities/patient.entity";
@@ -10,6 +10,11 @@ import { ShiftAssignmentEntity } from "./entities/shiftAssignment.entity";
 import { ShiftDTO } from "./dto/shift.dto";
 import { UpdateDoctorDTO } from "./dto/update-doctor.dto";
 import { MedicalReportEntity } from "../patient/entities/medical_report.entity";
+import { DiseaseEntity } from "../disease/disease.entity";
+import { DiseaseService } from "../disease/disease.service";
+import { AppointmentItemEntity } from "../patient/entities/appointment_item.entity";
+import { calcBill } from "../billing/billing.util";
+import { BhytService } from "../billing/bhyt.service";
 
 @Injectable()
 export class DoctorService implements IDoctorService {
@@ -27,7 +32,14 @@ export class DoctorService implements IDoctorService {
         private shiftAssignmentRepo: Repository<ShiftAssignmentEntity>,
 
         @InjectRepository(MedicalReportEntity)
-        private reportRepo: Repository<MedicalReportEntity>
+        private reportRepo: Repository<MedicalReportEntity>,
+
+        @InjectRepository(DiseaseEntity)
+        private diseaseRepo: Repository<DiseaseEntity>,
+
+        private diseaseService: DiseaseService,
+
+        private bhytService: BhytService,
     ) {}
 
     listDoctors(): Promise<DoctorEntity[]> {
@@ -70,6 +82,11 @@ export class DoctorService implements IDoctorService {
         const start = new Date(y, m - 1, d, tStart.getHours(), tStart.getMinutes(), 0, 0);
         const end = new Date(y, m - 1, d, tEnd.getHours(), tEnd.getMinutes(), 0, 0);
         const duration = Math.max(0, (end.getTime() - start.getTime()) / 3_600_000);
+        if (start.getTime() < Date.now()) throw new BadRequestException("Không thể đăng ký ca đã bắt đầu hoặc đã qua");
+        const dup = await this.shiftAssignmentRepo.findOne({
+            where: { doctor: { id: doctorId }, status: "ACTIVE", startTime: start },
+        });
+        if (dup) throw new ConflictException("Bạn đã đăng ký ca này rồi");
 
         return this.shiftAssignmentRepo.save({
             doctor: { id: doctorId } as DoctorEntity,
@@ -122,6 +139,21 @@ export class DoctorService implements IDoctorService {
             }
         }
         return [...new Set(slots)].sort();
+    }
+
+    /**
+     * Every path that sets an appointment time goes through here: the time must be
+     * one of the doctor's free slots (future, inside an ACTIVE shift, not booked).
+     * ponytail: check-then-insert, two simultaneous bookings can still race; add a
+     * partial unique index on (doctorId, apTime) WHERE cancelReason IS NULL if that matters.
+     */
+    async assertSlotFree(doctorId: number, apTime: string | Date): Promise<void> {
+        const t = new Date(apTime);
+        if (isNaN(t.getTime())) throw new BadRequestException("Thời gian không hợp lệ");
+        if (t.getTime() < Date.now()) throw new BadRequestException("Không thể đặt lịch trong quá khứ");
+        const free = await this.availability(doctorId, `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`);
+        if (!free.includes(t.toISOString()))
+            throw new ConflictException("Khung giờ đã có người đặt hoặc nằm ngoài ca trực của bác sĩ");
     }
 
     /** Shift assignments of the logged-in doctor. */
@@ -180,7 +212,7 @@ export class DoctorService implements IDoctorService {
     private async assertOwns(doctorId: number, appointmentId: number): Promise<AppointmentEntity> {
         const appt = await this.appointmentRepo.findOne({
             where: { id: appointmentId },
-            relations: ["patient", "doctor"],
+            relations: ["patient", "doctor", "items"],
         });
         if (!appt) throw new NotFoundException("Lịch khám không tồn tại");
         if (appt.doctor?.id !== doctorId) throw new ForbiddenException("Không phải lịch của bạn");
@@ -192,23 +224,62 @@ export class DoctorService implements IDoctorService {
         return this.assertOwns(doctorId, appointmentId);
     }
 
-    /** Mark an appointment as examined (confirmCondition 2 = đã khám xong). */
-    async completeAppointment(doctorId: number, appointmentId: number): Promise<AppointmentEntity> {
-        await this.assertOwns(doctorId, appointmentId);
-        await this.appointmentRepo.update({ id: appointmentId }, { confirmCondition: 2 });
-        const updated = await this.appointmentRepo.findOne({
-            where: { id: appointmentId },
-            relations: ["patient"],
+    /**
+     * Gửi chẩn đoán: mark examined (confirmCondition 2) and write the bill snapshot —
+     * fixed exam fee + chosen diseases; BHYT (card looked up by CCCD) reimburses only the covered parts.
+     * A fully covered bill (payable 0) is marked paid right away.
+     */
+    async completeAppointment(doctorId: number, appointmentId: number, diseaseIds: number[]): Promise<AppointmentEntity> {
+        const appt = await this.assertOwns(doctorId, appointmentId);
+        if (appt.cancelReason) throw new BadRequestException("Lịch đã bị hủy");
+        if (appt.confirmCondition !== 0) throw new BadRequestException("Chỉ hoàn thành được lịch đã xác nhận");
+
+        const diseases = await this.diseaseRepo.find({ where: { id: In(diseaseIds), active: true } });
+        if (diseases.length !== diseaseIds.length) {
+            throw new BadRequestException("Có bệnh không tồn tại hoặc đã ngừng áp dụng");
+        }
+
+        // cccd is select:false on the entity → read it explicitly
+        const p = await this.appointmentRepo.manager
+            .getRepository(PatientEntity)
+            .createQueryBuilder("p")
+            .addSelect("p.cccd")
+            .where("p.id = :id", { id: appt.patient.id })
+            .getOneOrFail();
+        const card = await this.bhytService.findCard(p.cccd, p.birthDate);
+        const bill = calcBill(
+            this.diseaseService.examFee,
+            this.diseaseService.examFeeBhytCovered,
+            diseases,
+            card,
+            appt.apTime,
+        );
+
+        await this.appointmentRepo.manager.transaction(async (m) => {
+            await m.update(AppointmentEntity, { id: appointmentId }, {
+                confirmCondition: 2,
+                examFee: bill.examFee,
+                examFeeCovered: bill.examFeeCovered,
+                total: bill.total,
+                insuranceRate: bill.insuranceRate,
+                insuranceCovered: bill.insuranceCovered,
+                payable: bill.payable,
+                insuranceCardNumber: bill.insuranceRate > 0 ? card!.number : null,
+                ...(bill.payable === 0 ? { paymentStatus: "paid" as const, paidAt: new Date() } : {}),
+            });
+            await m.insert(
+                AppointmentItemEntity,
+                diseases.map((d) => ({ appointment: { id: appointmentId }, name: d.name, price: d.price, bhytCovered: d.bhytCovered })),
+            );
         });
-        if (!updated) throw new NotFoundException("Lịch khám không tồn tại");
-        return updated;
+        return this.assertOwns(doctorId, appointmentId);
     }
 
     /** Appointments already examined by this doctor (confirmCondition 2). */
     listCompletedAppointment(doctorId: number): Promise<AppointmentEntity[]> {
         return this.appointmentRepo.find({
             where: { confirmCondition: 2, doctor: { id: doctorId }, cancelReason: IsNull() },
-            relations: ["patient"],
+            relations: ["patient", "doctor"],
             order: { apTime: "DESC" },
         });
     }
@@ -223,13 +294,14 @@ export class DoctorService implements IDoctorService {
         if (appt.confirmCondition === 2) throw new BadRequestException("Lịch đã khám xong");
         if (appt.rescheduled) throw new BadRequestException("Lịch chỉ được đổi 1 lần");
         if (!apTime) throw new BadRequestException("Thiếu khung giờ mới");
+        await this.assertSlotFree(doctorId, apTime);
         await this.appointmentRepo.update(
             { id: appointmentId },
             { apTime: new Date(apTime), rescheduled: true }, // giữ confirmCondition (bác sĩ chọn nên vẫn xác nhận)
         );
         const updated = await this.appointmentRepo.findOne({
             where: { id: appointmentId },
-            relations: ["patient"],
+            relations: ["patient", "doctor"],
         });
         if (!updated) throw new NotFoundException("Lịch khám không tồn tại");
         return updated;
@@ -244,7 +316,7 @@ export class DoctorService implements IDoctorService {
         );
         const updated = await this.appointmentRepo.findOne({
             where: { id: appointmentId },
-            relations: ["patient"],
+            relations: ["patient", "doctor"],
         });
         if (!updated) throw new NotFoundException("Lịch khám không tồn tại");
         return updated;
@@ -263,11 +335,12 @@ export class DoctorService implements IDoctorService {
             where: { id: patientId },
         });
         if (!patient) throw new NotFoundException("Bệnh nhân không tồn tại");
+        await this.assertSlotFree(doctorId, apTime);
         return this.appointmentRepo.save({
             apTime: new Date(apTime),
             confirmDate: new Date(),
             address,
-            note: note ?? null,
+            doctorNote: note ?? null, // written by the doctor, not the patient
             confirmCondition: 0, // doctor-created -> already confirmed
             doctorName: doctor.name,
             patient: { id: patientId } as PatientEntity,
@@ -275,24 +348,11 @@ export class DoctorService implements IDoctorService {
         });
     }
 
-    createDoctor(): Promise<DoctorEntity> {
-        let newDoctor = {
-            name: 'Test3',
-            age: 26,
-            dateOfBirth: new Date('2000-03-02'),
-            gender: 'male',
-            phone: '0111111888',
-            address: 'dia chi phong kham',
-            email: 'testthu3@gmail.com'
-        }
-        return this.doctorRepo.save(newDoctor)
-    }
-
     listUnacceptedAppointment(doctorId: number): Promise<AppointmentEntity[]> {
         // confirmCondition 1 = chờ xác nhận (critical-constraints rule 3); bỏ lịch đã hủy
         return this.appointmentRepo.find({
             where: { confirmCondition: 1, doctor: { id: doctorId }, cancelReason: IsNull() },
-            relations: ["patient"],
+            relations: ["patient", "doctor"],
             order: { apTime: "ASC" },
         });
     }
@@ -301,7 +361,7 @@ export class DoctorService implements IDoctorService {
         // confirmCondition 0 = đã xác nhận
         return this.appointmentRepo.find({
             where: { confirmCondition: 0, doctor: { id: doctorId }, cancelReason: IsNull() },
-            relations: ["patient"],
+            relations: ["patient", "doctor"],
             order: { apTime: "ASC" },
         });
     }

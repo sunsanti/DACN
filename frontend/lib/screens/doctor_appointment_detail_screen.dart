@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../core/dio_client.dart';
 import '../core/reason_dialog.dart';
+import '../core/billing_ui.dart';
+import '../core/ui.dart';
 import '../models/appointment.dart';
 import '../providers/doctor_provider.dart';
 import '../services/doctor_service.dart';
@@ -50,8 +52,10 @@ class _State extends State<DoctorAppointmentDetailScreen> {
 
   Future<void> _complete() async {
     final provider = context.read<DoctorProvider>();
+    final ids = await pickDiseases(context);
+    if (ids == null) return;
     try {
-      await provider.complete(widget.appointmentId);
+      await provider.complete(widget.appointmentId, ids);
       _toast('Đã đánh dấu khám xong');
       await _load();
     } catch (e) {
@@ -83,6 +87,14 @@ class _State extends State<DoctorAppointmentDetailScreen> {
         _row('Trạng thái', a.statusLabel),
         const Divider(height: 28),
         const Text('Thông tin bệnh nhân', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(children: [
+            UserAvatar(avatarUrl: a.patientAvatar, name: a.patientName, radius: 26),
+            const SizedBox(width: 12),
+            Expanded(child: Text(a.patientName, style: const TextStyle(fontWeight: FontWeight.w600))),
+          ]),
+        ),
         _row('Họ tên', a.patientName),
         _row('Tuổi', a.patientAge.toString()),
         _row('SĐT', a.patientPhone.isEmpty ? '—' : a.patientPhone),
@@ -92,6 +104,7 @@ class _State extends State<DoctorAppointmentDetailScreen> {
           _row('Lý do hủy', a.cancelReason ?? ''),
           _row('Người hủy', a.canceledByDoctor ? 'Bạn (bác sĩ)' : 'Bệnh nhân'),
         ],
+        if (a.hasBill) ...[const SizedBox(height: 16), BillCard(a)],
         const SizedBox(height: 20),
         Wrap(spacing: 8, runSpacing: 8, children: [
           if (a.isPending)
@@ -118,13 +131,14 @@ class _State extends State<DoctorAppointmentDetailScreen> {
               onPressed: () => _cancel('Hủy lịch #${a.id}'),
             ),
           ],
-          if (a.isExamined && a.patientId != null)
+          if (a.isExamined && a.patientId != null && a.doctorId != null)
             OutlinedButton.icon(
               icon: const Icon(Icons.event_repeat),
               label: const Text('Tái khám'),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => ReExaminationScreen(
+                    doctorId: a.doctorId!,
                     patientId: a.patientId!,
                     patientName: a.patientName,
                     defaultAddress: a.address,

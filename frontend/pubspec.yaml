@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:     # Vietnamese date pickers / dialogs
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -42,6 +44,10 @@ dependencies:
   image_picker: ^1.1.2        # pick symptom image
   path_provider: ^2.1.4       # temp dir for the downloaded PDF
   open_filex: ^4.5.0          # open the PDF
+  url_launcher: ^6.3.2        # open news links in the external browser
+  qr_flutter: ^4.1.0          # render the VietQR payment code
+  lottie: ^3.3.3              # payment success animation
+  confetti: ^0.8.0            # falling streamers on payment success
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +70,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/lottie/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

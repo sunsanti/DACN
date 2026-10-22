@@ -18,6 +18,9 @@ import { TypeOrmModule } from "@nestjs/typeorm";
                 synchronize: false,
                 logger: "advanced-console",
                 autoLoadEntities: true,
+                // DB session in the server's timezone, so `now()` defaults (createdAt…) match
+                // the Asia/Ho_Chi_Minh wall clock Node uses for `timestamp` columns.
+                extra: { options: "-c timezone=Asia/Ho_Chi_Minh" },
             }),
         }),
     ],
