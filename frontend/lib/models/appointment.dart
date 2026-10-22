@@ -1,3 +1,5 @@
+import 'disease.dart';
+
 class Appointment {
   final int id;
   final DateTime apTime;
@@ -15,6 +17,21 @@ class Appointment {
   final int patientAge;
   final String patientAddress;
   final int? patientId;
+  final String? doctorAvatar;
+  // Bill snapshot written when the doctor completes the visit; null = no bill yet.
+  final int? examFee;
+  final int? total;
+  final double? insuranceRate;
+  final int? insuranceCovered;
+  final int? payable;
+  final List<BillItem> items;
+  final bool examFeeCovered;
+  final String? insuranceCardNumber;
+  // Payment: unpaid → pending (cash/qr chosen) → paid
+  final String paymentStatus;
+  final String? paymentMethod;
+  final DateTime? paidAt;
+  final String? patientAvatar;
 
   Appointment({
     required this.id,
@@ -33,8 +50,28 @@ class Appointment {
     required this.patientAge,
     required this.patientAddress,
     required this.patientId,
+    this.doctorAvatar,
+    this.examFee,
+    this.total,
+    this.insuranceRate,
+    this.insuranceCovered,
+    this.payable,
+    this.items = const [],
+    this.examFeeCovered = true,
+    this.insuranceCardNumber,
+    this.paymentStatus = 'unpaid',
+    this.paymentMethod,
+    this.paidAt,
+    this.patientAvatar,
   });
 
+  bool get hasBill => payable != null;
+  bool get isPaid => paymentStatus == 'paid';
+  bool get isPaymentPending => paymentStatus == 'pending';
+  /// Amount BHYT reimburses on: exam fee (if covered) + covered lines.
+  int get coveredBase =>
+      (examFeeCovered ? (examFee ?? 0) : 0) +
+      items.where((i) => i.bhytCovered).fold<int>(0, (s, i) => s + i.price);
   bool get isCanceled => cancelReason != null && cancelReason!.isNotEmpty;
   bool get canceledByDoctor => canceledBy == 'doctor';
   bool get isPending => !isCanceled && confirmCondition == 1;
@@ -74,6 +111,21 @@ class Appointment {
       patientAge: (patient['age'] as num?)?.toInt() ?? 0,
       patientAddress: (patient['address'] ?? '') as String,
       patientId: patient['id'] as int?,
+      doctorAvatar: doctor is Map ? doctor['avatar'] as String? : null,
+      examFee: (json['examFee'] as num?)?.toInt(),
+      total: (json['total'] as num?)?.toInt(),
+      insuranceRate: (json['insuranceRate'] as num?)?.toDouble(),
+      insuranceCovered: (json['insuranceCovered'] as num?)?.toInt(),
+      payable: (json['payable'] as num?)?.toInt(),
+      items: (json['items'] as List? ?? [])
+          .map((e) => BillItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList(),
+      examFeeCovered: json['examFeeCovered'] as bool? ?? true,
+      insuranceCardNumber: json['insuranceCardNumber'] as String?,
+      paymentStatus: (json['paymentStatus'] ?? 'unpaid') as String,
+      paymentMethod: json['paymentMethod'] as String?,
+      paidAt: json['paidAt'] == null ? null : DateTime.parse(json['paidAt'] as String).toLocal(),
+      patientAvatar: patient['avatar'] as String?,
     );
   }
 }

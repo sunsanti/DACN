@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/appointment.dart';
+import '../core/news_ui.dart';
+import '../core/ui.dart';
+import '../models/news.dart';
 import '../providers/appointment_provider.dart';
 import '../providers/auth_provider.dart';
-import 'create_appointment_screen.dart';
+import '../services/news_service.dart';
 import 'ai_report_screen.dart';
-import 'appointment_detail_screen.dart';
+import 'create_appointment_screen.dart';
+import 'my_appointments_screen.dart';
+import 'paid_bills_screen.dart';
 import 'profile_screen.dart';
 
+/// Patient home: news carousel + shortcut bubbles + news list. The appointment list lives in
+/// [MyAppointmentsScreen].
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
 
@@ -17,29 +23,100 @@ class PatientHomeScreen extends StatefulWidget {
 }
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
+  List<News> _news = []; // empty or failed → news blocks are hidden
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppointmentProvider>().load();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  Future<void> _refresh() async {
+    final appts = context.read<AppointmentProvider>().load();
+    try {
+      final news = await NewsService().list(limit: 20);
+      if (mounted) setState(() => _news = news);
+    } catch (_) {
+      // tin tức là phụ: lỗi thì ẩn, không chặn lịch khám
+    }
+    await appts;
+  }
+
+  /// Push a screen, then reload so bubble badges reflect what changed there.
+  Future<void> _open(Widget screen) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    if (mounted) context.read<AppointmentProvider>().load();
+  }
+
+  /// "Báo cáo AI": pick one of the non-canceled appointments first.
+  Future<void> _pickForAi() async {
+    final list = context.read<AppointmentProvider>().appointments.where((a) => !a.isCanceled).toList();
+    if (list.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chưa có lịch khám. Hãy đặt lịch trước.')),
+      );
+      return;
+    }
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.6),
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Text('Chọn lịch khám để gửi cho AI',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              ),
+              for (var i = 0; i < list.length; i++)
+                ListTile(
+                  leading: const Icon(Icons.event_note),
+                  title: Text('BS. ${list[i].doctorName}'),
+                  subtitle: Text('${fmtTime(list[i].apTime)}  ·  ${fmtDate(list[i].apTime)}'),
+                  trailing: StatusChip(list[i]),
+                  onTap: () => Navigator.pop(ctx, i),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked != null && mounted) _open(AiReportScreen(appointment: list[picked]));
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppointmentProvider>();
+    final appts = provider.appointments;
+    final upcoming = appts.where(AppointmentFilter.upcoming.test).length;
+    final unpaid = appts.where(AppointmentFilter.unpaid.test).length;
+
+    final bubbles = [
+      Bubble(Icons.edit_calendar, 'Đặt lịch khám',
+          color: const Color(0xFF0E7C86), onTap: () => _open(const CreateAppointmentScreen())),
+      Bubble(Icons.event_note, 'Lịch hẹn\ncủa tôi',
+          color: const Color(0xFF3559C7),
+          badge: upcoming,
+          onTap: () => _open(const MyAppointmentsScreen())),
+      Bubble(Icons.payments, 'Chờ\nthanh toán',
+          color: const Color(0xFFB26B00),
+          badge: unpaid,
+          onTap: () => _open(const MyAppointmentsScreen(initialFilter: AppointmentFilter.unpaid))),
+      Bubble(Icons.receipt_long, 'Hoá đơn\nđã trả',
+          color: const Color(0xFF2E7D32), onTap: () => _open(const PaidBillsScreen())),
+      Bubble(Icons.smart_toy, 'Báo cáo AI', color: const Color(0xFF7B3FC4), onTap: _pickForAi),
+      Bubble(Icons.account_circle, 'Hồ sơ',
+          color: const Color(0xFFC2364A), onTap: () => _open(const ProfileScreen())),
+    ];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lịch khám của tôi'),
+        title: const SessionTitle('Trang chủ'),
         actions: [
-          IconButton(
-            tooltip: 'Hồ sơ',
-            icon: const Icon(Icons.person),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ProfileScreen()),
-            ),
-          ),
           IconButton(
             tooltip: 'Đăng xuất',
             icon: const Icon(Icons.logout),
@@ -47,88 +124,44 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const CreateAppointmentScreen()),
-        ),
-        icon: const Icon(Icons.add),
-        label: const Text('Đặt lịch'),
-      ),
       body: RefreshIndicator(
-        onRefresh: () => context.read<AppointmentProvider>().load(),
-        child: _body(provider),
-      ),
-    );
-  }
-
-  Widget _body(AppointmentProvider provider) {
-    if (provider.loading && provider.appointments.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (provider.error != null && provider.appointments.isEmpty) {
-      return ListView(
-        children: [
-          const SizedBox(height: 120),
-          Center(child: Text('Lỗi tải dữ liệu:\n${provider.error}', textAlign: TextAlign.center)),
-        ],
-      );
-    }
-    if (provider.appointments.isEmpty) {
-      return ListView(
-        children: const [
-          SizedBox(height: 120),
-          Center(child: Text('Chưa có lịch khám.\nNhấn "Đặt lịch" để tạo.', textAlign: TextAlign.center)),
-        ],
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      itemCount: provider.appointments.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (_, i) => _tile(provider.appointments[i]),
-    );
-  }
-
-  Widget _tile(Appointment a) {
-    final d = a.apTime;
-    final dateStr =
-        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} '
-        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-    return Card(
-      child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.event)),
-        title: Text('BS. ${a.doctorName} — $dateStr'),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        onRefresh: _refresh,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            Text('Địa chỉ: ${a.address}'),
-            if (a.note != null && a.note!.isNotEmpty) Text('Ghi chú: ${a.note}'),
-            if (a.doctorNote != null && a.doctorNote!.isNotEmpty)
-              Text('BS: ${a.doctorNote}', style: const TextStyle(color: Colors.blue)),
-            Text('Trạng thái: ${a.statusLabel}',
-                style: TextStyle(
-                    color: a.isCanceled
-                        ? Colors.red
-                        : a.isConfirmed
-                            ? Colors.green
-                            : a.isExamined
-                                ? Colors.blue
-                                : Colors.orange)),
-            if (a.isCanceled && a.cancelReason != null)
-              Text('Lý do hủy: ${a.cancelReason}', style: const TextStyle(color: Colors.red, fontSize: 12)),
-          ],
-        ),
-        trailing: a.isCanceled
-            ? null
-            : IconButton(
-                tooltip: 'Gửi ảnh + triệu chứng cho AI',
-                icon: const Icon(Icons.smart_toy),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => AiReportScreen(appointment: a)),
+            if (_news.isNotEmpty) ...[
+              NewsCarousel(_news.take(5).toList()),
+              const SizedBox(height: 16),
+            ],
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                child: GridView(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisExtent: 122, // bubble + 2 label lines; fixed so wide screens don't stretch cells
+                  ),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: bubbles,
                 ),
               ),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => AppointmentDetailScreen(appointmentId: a.id)),
+            ),
+            if (provider.error != null && appts.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: InfoLine(Icons.cloud_off, 'Lỗi tải lịch khám: ${provider.error}',
+                    color: Colors.red.shade700),
+              ),
+            if (_news.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text('Tin tức sức khoẻ', style: Theme.of(context).textTheme.titleMedium),
+              ),
+              for (final n in _news) NewsTile(n),
+            ],
+          ],
         ),
       ),
     );

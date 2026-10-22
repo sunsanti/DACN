@@ -8,6 +8,12 @@ import { AppointmentEntity } from "../src/patient/entities/appointment.entity";
 import { PatientEntity } from "./patient/entities/patient.entity";
 import { AccountEntity } from "./auth/entities/account.entity";
 import { MedicalReportEntity } from "./patient/entities/medical_report.entity";
+import { NewsEntity } from "./news/news.entity";
+import { DiseaseEntity } from "./disease/disease.entity";
+import { AppointmentItemEntity } from "./patient/entities/appointment_item.entity";
+import { BhytRegistryEntity } from "./billing/bhyt-registry.entity";
+import { PaymentTransactionEntity } from "./payment/payment-transaction.entity";
+import { NotificationEntity } from "./payment/notification.entity";
 
 dotenv.config(); // load backend/.env for the TypeORM CLI (migrations)
 
@@ -25,8 +31,15 @@ export const AppDataSource = new DataSource({
         AppointmentEntity,
         PatientEntity,
         AccountEntity,
-        MedicalReportEntity
+        MedicalReportEntity,
+        NewsEntity,
+        DiseaseEntity,
+        AppointmentItemEntity,
+        BhytRegistryEntity,
+        PaymentTransactionEntity,
+        NotificationEntity,
     ],
     migrations: ["src/migrations/*.ts"],
-    synchronize: false
+    synchronize: false,
+    extra: { options: "-c timezone=Asia/Ho_Chi_Minh" }, // keep in sync with database.module.ts
 });

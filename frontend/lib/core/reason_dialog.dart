@@ -16,7 +16,7 @@ Future<String?> promptReason(
         controller: ctrl,
         maxLines: 2,
         autofocus: true,
-        decoration: InputDecoration(labelText: hint, border: const OutlineInputBorder()),
+        decoration: InputDecoration(labelText: hint),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng')),

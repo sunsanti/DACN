@@ -1,3 +1,4 @@
+import { Type } from "class-transformer";
 import { ApiProperty } from "@nestjs/swagger";
 import {
     IsDateString,
@@ -22,6 +23,7 @@ export class RegisterDoctorDTO {
     name: string;
 
     @ApiProperty({ example: 35 })
+    @Type(() => Number) // multipart gửi mọi field dạng string
     @IsInt()
     age: number;
 

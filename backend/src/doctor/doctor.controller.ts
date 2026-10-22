@@ -20,6 +20,7 @@ import { ReAppointmentDTO } from "./dto/RA.dto";
 import { ShiftListDTO } from "./dto/shiftList.dto";
 import { UpdateDoctorDTO } from "./dto/update-doctor.dto";
 import { ReExaminationDTO } from "./dto/reExamination.dto";
+import { CompleteDTO } from "./dto/complete.dto";
 import { RegisterShiftDTO } from "./dto/registerShift.dto";
 import { CancelDTO } from "../patient/dto/cancel.dto";
 import { UpdateAppointmentDTO } from "../patient/dto/update_appointment.dto";
@@ -35,11 +36,6 @@ export class DoctorController {
     constructor(private readonly doctorService: DoctorService) {}
 
     // --- open to any authenticated user (patient booking needs the list) ---
-
-    @Post('/create-doctor')
-    createDoctor(): Promise<DoctorEntity> {
-        return this.doctorService.createDoctor();
-    }
 
     @Get('/list')
     listDoctors(): Promise<DoctorEntity[]> {
@@ -88,8 +84,12 @@ export class DoctorController {
 
     @Roles('doctor')
     @Post('/complete/:id')
-    completeAppointment(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
-        return this.doctorService.completeAppointment(user.doctorId!, id);
+    completeAppointment(
+        @CurrentUser() user: JwtPayload,
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: CompleteDTO,
+    ) {
+        return this.doctorService.completeAppointment(user.doctorId!, id, dto.diseaseIds);
     }
 
     @Roles('doctor')

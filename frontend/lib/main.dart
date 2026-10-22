@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
@@ -32,14 +33,77 @@ class DacnApp extends StatelessWidget {
     return MaterialApp(
       title: 'DACN - Đặt lịch khám',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: Colors.blue,
-        useMaterial3: true,
+      theme: _theme,
+      locale: const Locale('vi'),
+      supportedLocales: const [Locale('vi'), Locale('en')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      // Web/tablet: keep the phone-width layout centered instead of stretching.
+      builder: (context, child) => ColoredBox(
+        color: const Color(0xFFE8EEF3),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: child,
+          ),
+        ),
       ),
       home: const AuthGate(),
     );
   }
 }
+
+final _scheme = ColorScheme.fromSeed(seedColor: const Color(0xFF0E7C86));
+final _radius = BorderRadius.circular(14);
+
+final _theme = ThemeData(
+  useMaterial3: true,
+  colorScheme: _scheme,
+  scaffoldBackgroundColor: const Color(0xFFF4F7F9),
+  appBarTheme: AppBarTheme(
+    backgroundColor: _scheme.primary,
+    foregroundColor: _scheme.onPrimary,
+    centerTitle: false,
+    titleTextStyle: TextStyle(color: _scheme.onPrimary, fontSize: 19, fontWeight: FontWeight.w600),
+  ),
+  tabBarTheme: TabBarThemeData(
+    labelColor: _scheme.onPrimary,
+    unselectedLabelColor: _scheme.onPrimary.withValues(alpha: 0.7),
+    indicatorColor: _scheme.onPrimary,
+    dividerColor: Colors.transparent,
+  ),
+  cardTheme: CardThemeData(
+    elevation: 0,
+    color: Colors.white,
+    margin: EdgeInsets.zero,
+    shape: RoundedRectangleBorder(
+      borderRadius: _radius,
+      side: BorderSide(color: _scheme.outlineVariant.withValues(alpha: 0.6)),
+    ),
+    clipBehavior: Clip.antiAlias,
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: Colors.white,
+    border: OutlineInputBorder(borderRadius: _radius),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: _radius,
+      borderSide: BorderSide(color: _scheme.outlineVariant),
+    ),
+  ),
+  filledButtonTheme: FilledButtonThemeData(
+    style: FilledButton.styleFrom(
+      minimumSize: const Size(0, 48),
+      shape: RoundedRectangleBorder(borderRadius: _radius),
+    ),
+  ),
+  outlinedButtonTheme: OutlinedButtonThemeData(
+    style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: _radius)),
+  ),
+  floatingActionButtonTheme: FloatingActionButtonThemeData(
+    backgroundColor: _scheme.primary,
+    foregroundColor: _scheme.onPrimary,
+  ),
+);
 
 /// Routes by auth state + role.
 class AuthGate extends StatelessWidget {

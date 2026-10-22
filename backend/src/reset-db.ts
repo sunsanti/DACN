@@ -15,8 +15,10 @@ async function main() {
     const q = (sql: string, params?: any[]) => AppDataSource.query(sql, params);
 
     // 1) wipe all data (keep schema + the "migrations" table)
+    // bhyt_registry is reference data (stand-in for BHXH) → intentionally kept.
+    // ponytail: files in uploads/ (avatars, news images) are not deleted; rm -rf uploads/ if disk matters
     await q(
-        `TRUNCATE TABLE account, "medical_report", appointment, "shiftAssignment", shift, patient, doctor RESTART IDENTITY CASCADE`,
+        `TRUNCATE TABLE account, "medical_report", appointment, "shiftAssignment", shift, patient, doctor, news, disease, payment_transaction, notification RESTART IDENTITY CASCADE`,
     );
 
     // 2) re-seed the admin account

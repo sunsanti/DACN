@@ -25,3 +25,13 @@ __pycache__/
 # Secrets
 .env
 .env.local
+
+# Uploaded images (avatars, news)
+backend/uploads/
+
+# Smoke-test output (contains real JWTs + test data)
+screenshots/**/smoke-result.txt
+*.log
+
+# Test accounts tied to the local dacn_db
+TAI_KHOAN_TEST.md

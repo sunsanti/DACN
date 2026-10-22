@@ -7,10 +7,15 @@ import { AuthService } from "./auth.service";
 import { AccountEntity } from "./entities/account.entity";
 import { PatientEntity } from "../patient/entities/patient.entity";
 import { DoctorEntity } from "../doctor/entities/doctor.entity";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { BillingModule } from "../billing/billing.module";
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([AccountEntity, PatientEntity, DoctorEntity]),
+        BillingModule,
+        // Only routes with @UseGuards(ThrottlerGuard) are limited (bhyt-lookup).
+        ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
         JwtModule.registerAsync({
             global: true,
             imports: [ConfigModule],

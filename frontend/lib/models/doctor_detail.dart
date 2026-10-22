@@ -6,6 +6,7 @@ class DoctorDetail {
   final String phone;
   final String address;
   final String email;
+  final String? avatar;
 
   DoctorDetail({
     required this.id,
@@ -15,6 +16,7 @@ class DoctorDetail {
     required this.phone,
     required this.address,
     required this.email,
+    this.avatar,
   });
 
   factory DoctorDetail.fromJson(Map<String, dynamic> json) => DoctorDetail(
@@ -25,5 +27,6 @@ class DoctorDetail {
         phone: (json['phone'] ?? '') as String,
         address: (json['address'] ?? '') as String,
         email: (json['email'] ?? '') as String,
+        avatar: json['avatar'] as String?,
       );
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../core/dio_client.dart';
+import '../core/ui.dart';
 import '../providers/admin_provider.dart';
 
 class AddDoctorScreen extends StatefulWidget {
@@ -22,6 +24,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
   String _gender = 'male';
   DateTime _dob = DateTime(1990, 1, 1);
   bool _submitting = false;
+  XFile? _avatar; // bắt buộc
 
   @override
   void dispose() {
@@ -32,7 +35,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate() || _avatar == null) return;
     final provider = context.read<AdminProvider>();
     setState(() => _submitting = true);
     try {
@@ -45,6 +48,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
         gender: _gender,
         phone: _phone.text.trim(),
         address: _address.text.trim(),
+        avatar: _avatar!,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -73,7 +77,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
         controller: c,
         obscureText: obscure,
         keyboardType: kb,
-        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+        decoration: InputDecoration(labelText: label),
         validator: validator,
       ),
     );
@@ -89,12 +93,18 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
           key: _formKey,
           child: Column(
             children: [
+              AvatarPicker(
+                onChanged: (f) => setState(() => _avatar = f),
+                errorText: _avatar == null ? 'Cần chọn ảnh đại diện' : null,
+              ),
+              const SizedBox(height: 16),
               _field(_email, 'Email', kb: TextInputType.emailAddress,
                   validator: (v) => (v == null || !v.contains('@')) ? 'Email không hợp lệ' : null),
               _field(_password, 'Mật khẩu (≥ 6 ký tự)', obscure: true,
                   validator: (v) => (v == null || v.length < 6) ? 'Tối thiểu 6 ký tự' : null),
               _field(_name, 'Họ tên bác sĩ', validator: _req),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: _field(_age, 'Tuổi', kb: TextInputType.number,
@@ -104,7 +114,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       initialValue: _gender,
-                      decoration: const InputDecoration(labelText: 'Giới tính', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'Giới tính'),
                       items: const [
                         DropdownMenuItem(value: 'male', child: Text('Nam')),
                         DropdownMenuItem(value: 'female', child: Text('Nữ')),
@@ -115,13 +125,8 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              ListTile(
-                shape: RoundedRectangleBorder(
-                  side: const BorderSide(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                title: Text('Ngày sinh: ${_dob.toIso8601String().split('T').first}'),
-                trailing: const Icon(Icons.calendar_today),
+              InkWell(
+                borderRadius: BorderRadius.circular(14),
                 onTap: () async {
                   final p = await showDatePicker(
                     context: context,
@@ -131,7 +136,15 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                   );
                   if (p != null) setState(() => _dob = p);
                 },
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Ngày sinh',
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  child: Text(fmtDate(_dob)),
+                ),
               ),
+              const SizedBox(height: 12),
               const SizedBox(height: 12),
               _field(_phone, 'Số điện thoại', kb: TextInputType.phone, validator: _req),
               _field(_address, 'Địa chỉ phòng khám', validator: _req),
@@ -139,7 +152,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _submitting ? null : _submit,
+                  onPressed: _submitting || _avatar == null ? null : _submit,
                   child: _submitting
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Text('Tạo tài khoản bác sĩ'),

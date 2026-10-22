@@ -43,8 +43,8 @@ class DoctorProvider extends ChangeNotifier {
     await load();
   }
 
-  Future<void> complete(int id) async {
-    await _service.complete(id);
+  Future<void> complete(int id, List<int> diseaseIds) async {
+    await _service.complete(id, diseaseIds);
     await load();
   }
 

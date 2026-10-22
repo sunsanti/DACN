@@ -8,7 +8,6 @@ import { ShiftAssignmentEntity } from "../entities/shiftAssignment.entity";
 import { ShiftDTO } from "../dto/shift.dto";
 
 export interface IDoctorService {
-    createDoctor(): Promise<DoctorEntity>;
     listDoctors(): Promise<DoctorEntity[]>;
     //appointment (scoped to the logged-in doctor)
     listUnacceptedAppointment(doctorId: number): Promise<AppointmentEntity[]>;

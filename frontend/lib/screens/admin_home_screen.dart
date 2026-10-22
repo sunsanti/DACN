@@ -1,10 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/ui.dart';
 import '../models/doctor_salary.dart';
 import '../providers/admin_provider.dart';
 import '../providers/auth_provider.dart';
 import 'add_doctor_screen.dart';
+import 'admin_disease_screen.dart';
+import 'admin_news_screen.dart';
+import 'admin_notifications_screen.dart';
+import 'admin_payments_screen.dart';
+import '../services/payment_service.dart';
 import 'admin_doctor_detail_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
@@ -15,47 +23,127 @@ class AdminHomeScreen extends StatefulWidget {
 }
 
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
+  final _payments = PaymentService();
+  int _unread = 0;
+  Timer? _poll;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AdminProvider>().load();
     });
+    _refreshUnread();
+    _poll = Timer.periodic(const Duration(seconds: 15), (_) => _refreshUnread());
   }
 
-  String _money(int v) {
-    final s = v.toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-    }
-    return '$buf đ';
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
   }
+
+  /// Bell badge: new "money received" / "check this transfer" notifications.
+  Future<void> _refreshUnread() async {
+    try {
+      final n = await _payments.unreadCount();
+      if (mounted) setState(() => _unread = n);
+    } catch (_) {
+      // badge is best-effort
+    }
+  }
+
+  Future<void> _open(Widget screen) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    _refreshUnread();
+  }
+
+  int _tab = 0;
+
+  static const _titles = ['Bác sĩ & lương', 'Thanh toán', 'Bảng giá bệnh', 'Tin tức'];
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AdminProvider>();
+    final unread = _unread > 99 ? '99+' : '$_unread';
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin — Bác sĩ & Lương'),
+        title: SessionTitle(_titles[_tab]),
         actions: [
           IconButton(
+            tooltip: 'Thông báo',
+            icon: Badge(
+              isLabelVisible: _unread > 0,
+              label: Text(unread),
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            onPressed: () => _open(const AdminNotificationsScreen()),
+          ),
+          IconButton(
+            tooltip: 'Đăng xuất',
             icon: const Icon(Icons.logout),
             onPressed: () => context.read<AuthProvider>().logout(),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AddDoctorScreen()),
-        ),
-        icon: const Icon(Icons.person_add),
-        label: const Text('Thêm bác sĩ'),
+      floatingActionButton: _tab == 0
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AddDoctorScreen()),
+              ),
+              icon: const Icon(Icons.person_add),
+              label: const Text('Thêm bác sĩ'),
+            )
+          : null,
+      // IndexedStack keeps each tab's state (scroll, sub-tab) while switching.
+      body: IndexedStack(
+        index: _tab,
+        children: [
+          RefreshIndicator(
+            onRefresh: () => context.read<AdminProvider>().load(),
+            child: _body(provider),
+          ),
+          const AdminPaymentsScreen(),
+          const AdminDiseaseScreen(),
+          const AdminNewsScreen(),
+        ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => context.read<AdminProvider>().load(),
-        child: _body(provider),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _tab,
+        onDestinationSelected: (i) {
+          setState(() => _tab = i);
+          _refreshUnread();
+        },
+        destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.groups_outlined),
+            selectedIcon: Icon(Icons.groups),
+            label: 'Bác sĩ',
+          ),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: _unread > 0,
+              label: Text(unread),
+              child: const Icon(Icons.point_of_sale_outlined),
+            ),
+            selectedIcon: Badge(
+              isLabelVisible: _unread > 0,
+              label: Text(unread),
+              child: const Icon(Icons.point_of_sale),
+            ),
+            label: 'Thanh toán',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.price_change_outlined),
+            selectedIcon: Icon(Icons.price_change),
+            label: 'Bảng giá',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.newspaper_outlined),
+            selectedIcon: Icon(Icons.newspaper),
+            label: 'Tin tức',
+          ),
+        ],
       ),
     );
   }
@@ -65,33 +153,54 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (provider.error != null && provider.salaries.isEmpty) {
-      return ListView(children: [
-        const SizedBox(height: 120),
-        Center(child: Text('Lỗi: ${provider.error}', textAlign: TextAlign.center)),
-      ]);
+      return EmptyState(Icons.cloud_off, 'Lỗi: ${provider.error}');
     }
     if (provider.salaries.isEmpty) {
-      return ListView(children: const [
-        SizedBox(height: 120),
-        Center(child: Text('Chưa có bác sĩ.\nNhấn "Thêm bác sĩ".', textAlign: TextAlign.center)),
-      ]);
+      return const EmptyState(Icons.group_off_outlined, 'Chưa có bác sĩ.\nNhấn "Thêm bác sĩ".');
     }
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      itemCount: provider.salaries.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (_, i) => _tile(provider.salaries[i]),
+    final total = provider.salaries.fold<int>(0, (sum, s) => sum + s.salary);
+    final hours = provider.salaries.fold<num>(0, (sum, s) => sum + s.totalHours);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      children: [
+        _summary(total, hours, provider.salaries.length),
+        const SizedBox(height: 16),
+        for (final s in provider.salaries) ...[_tile(s), const SizedBox(height: 12)],
+      ],
+    );
+  }
+
+  Widget _summary(int total, num hours, int doctors) {
+    final scheme = Theme.of(context).colorScheme;
+    final on = scheme.onPrimary;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [scheme.primary, scheme.primary.withValues(alpha: 0.8)]),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Tổng lương phải trả', style: TextStyle(color: on.withValues(alpha: 0.85))),
+          const SizedBox(height: 4),
+          Text(fmtMoney(total), style: TextStyle(color: on, fontSize: 28, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Text('$doctors bác sĩ  ·  ${fmtHours(hours)} làm việc', style: TextStyle(color: on.withValues(alpha: 0.85))),
+        ],
+      ),
     );
   }
 
   Widget _tile(DoctorSalary s) {
     return Card(
       child: ListTile(
-        leading: CircleAvatar(child: Text(s.doctorId.toString())),
-        title: Text('BS. ${s.name}'),
-        subtitle: Text('Số giờ làm: ${s.totalHours}h  ·  ${_money(s.hourlyRate)}/giờ'),
-        trailing: Text(_money(s.salary),
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        leading: UserAvatar(avatarUrl: s.avatar, name: s.name.trim().split(' ').last),
+        title: Text('BS. ${s.name}', style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text('${fmtHours(s.totalHours)}  ·  ${fmtMoney(s.hourlyRate)}/giờ'),
+        trailing: Text(fmtMoney(s.salary),
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Colors.green.shade700)),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => AdminDoctorDetailScreen(doctorId: s.doctorId)),
         ),

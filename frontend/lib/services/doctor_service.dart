@@ -55,8 +55,9 @@ class DoctorService {
     return Appointment.fromJson(Map<String, dynamic>.from(res.data));
   }
 
-  Future<void> complete(int id) async {
-    await DioClient.dio.post('/doctor/complete/$id');
+  /// Send the diagnosis: chosen diseases → server writes the bill.
+  Future<void> complete(int id, List<int> diseaseIds) async {
+    await DioClient.dio.post('/doctor/complete/$id', data: {'diseaseIds': diseaseIds});
   }
 
   Future<void> reExamination(

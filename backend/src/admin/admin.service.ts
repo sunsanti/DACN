@@ -8,6 +8,7 @@ import { ShiftAssignmentEntity } from "../doctor/entities/shiftAssignment.entity
 export interface DoctorSalary {
     doctorId: number;
     name: string;
+    avatar: string;
     totalHours: number;
     hourlyRate: number;
     salary: number;
@@ -52,6 +53,7 @@ export class AdminService {
             return {
                 doctorId: d.id,
                 name: d.name,
+                avatar: d.avatar,
                 totalHours,
                 hourlyRate: this.hourlyRate,
                 salary: Math.round(totalHours * this.hourlyRate),

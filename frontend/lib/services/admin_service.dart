@@ -1,3 +1,6 @@
+import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
+import 'auth_service.dart' show imagePart;
 import '../core/dio_client.dart';
 import '../models/doctor_salary.dart';
 import '../models/doctor_detail.dart';
@@ -29,8 +32,9 @@ class AdminService {
     required String gender,
     required String phone,
     required String address,
+    required XFile avatar, // bắt buộc để nhận diện bác sĩ
   }) async {
-    await DioClient.dio.post('/auth/register-doctor', data: {
+    await DioClient.dio.post('/auth/register-doctor', data: FormData.fromMap({
       'email': email,
       'password': password,
       'name': name,
@@ -39,6 +43,7 @@ class AdminService {
       'gender': gender,
       'phone': phone,
       'address': address,
-    });
+      'avatar': await imagePart(avatar),
+    }));
   }
 }

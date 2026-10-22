@@ -126,7 +126,6 @@ class _AiReportScreenState extends State<AiReportScreen> {
               maxLines: 4,
               decoration: const InputDecoration(
                 labelText: 'Mô tả triệu chứng',
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 24),

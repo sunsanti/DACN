@@ -1,14 +1,20 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { UPLOAD_ROOT } from './common/upload';
 
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Allow the Flutter web build (and any dev origin) to call the API.
   app.enableCors();
+
+  // Ảnh upload (avatar, tin tức). Public, tên file UUID; không dùng cho dữ liệu y tế.
+  // Đặt SAU enableCors để Flutter web (CanvasKit tải ảnh bằng fetch) nhận được header CORS.
+  app.useStaticAssets(UPLOAD_ROOT, { prefix: '/uploads' });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
