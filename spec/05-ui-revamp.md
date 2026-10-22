@@ -54,7 +54,7 @@ Thứ tự: `ui-preview` ∥ `register-bhyt` → **cổng duyệt** → `patient
 **Backend.** Thêm route mới `POST /auth/bhyt-lookup`, gắn `@Public()` vì người dùng chưa có tài khoản.
 ```
 Request:  { "cccd": "079012345689", "birthDate": "2000-01-01" }
-200 có thẻ:     { "found": true, "cardNumber": "DN4******1234", "rate": 0.8, "validTo": "2026-12-31", "valid": true }
+200 có thẻ:     { "found": true, "cardNumber": "DN4******1234", "rate": 0.8, "validTo": "2026-12-31", "status": "valid" }   // status: valid | expired | not_yet_valid
 200 không thẻ:  { "found": false }
 400: CCCD sai định dạng (khác 12 số) hoặc ngày sinh sai định dạng
 ```

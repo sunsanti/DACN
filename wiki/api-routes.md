@@ -14,6 +14,7 @@ All HTTP endpoints of the NestJS backend. Swagger UI at **`GET /api`** (Bearer a
 | Method | Path | Access | Notes |
 | --- | --- | --- | --- |
 | POST | `/auth/register` | `@Public` | Patient self-registration (multipart): **`cccd` required** (12 digits, unique → 409), optional `avatar`. BHYT is looked up by CCCD (no self-declared card) |
+| POST | `/auth/bhyt-lookup` | `@Public` + throttle 10/min/IP | Pre-registration BHYT preview `{cccd, birthDate}` → `{found:false}` or `{found, cardNumber (masked 3+4), rate, validTo, status}`. Read-only |
 | POST | `/auth/login` | `@Public` | `{email,password}` → `{accessToken, role, patientId?, doctorId?, name, avatarUrl}` |
 | POST | `/auth/register-doctor` | `admin` | Admin creates a doctor (multipart, **`avatar` required**) |
 

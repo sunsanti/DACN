@@ -10,7 +10,7 @@ tags: [auth, security, jwt, avatar]
 ## Pieces
 
 - `backend/src/auth/` — `AuthController` (`/auth/register`, `/auth/login`, `/auth/register-doctor`), `AuthService` (bcrypt + `JwtService`), `AccountEntity` (email, passwordHash, role, patient/doctor link).
-- Global guards (`app.module.ts`, `APP_GUARD`): `JwtAuthGuard` then `RolesGuard`. Every route needs a JWT unless marked `@Public()` (only register + login). `@Roles(...)` gates by role, `@CurrentUser()` gives `{sub, role, patientId?, doctorId?}`.
+- Global guards (`app.module.ts`, `APP_GUARD`): `JwtAuthGuard` then `RolesGuard`. Every route needs a JWT unless marked `@Public()` (register, login, bhyt-lookup; bhyt-lookup is also rate-limited by `ThrottlerGuard`, 10/min/IP). `@Roles(...)` gates by role, `@CurrentUser()` gives `{sub, role, patientId?, doctorId?}`.
 - JWT secret/TTL: `JWT_SECRET`, `JWT_EXPIRES` (env; dev fallback secret in `auth.module.ts`).
 - Admin is seeded (`admin@dacn.local` / `Admin@123`); patients self-register; only admins create doctors.
 

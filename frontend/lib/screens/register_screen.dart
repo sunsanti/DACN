@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../core/dio_client.dart';
 import '../core/ui.dart';
 import '../providers/auth_provider.dart';
+import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -28,11 +31,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
   XFile? _avatar; // tuỳ chọn
   final _cccd = TextEditingController(); // bắt buộc, 12 số
 
+  // BHYT preview: chỉ tra khi đủ 12 số CCCD và người dùng đã tự chọn ngày sinh.
+  bool _birthPicked = false;
+  Timer? _debounce;
+  int _lookupSeq = 0; // bỏ kết quả của request cũ
+  bool _bhytLoading = false;
+  Map<String, dynamic>? _bhyt; // null = chưa tra
+  bool _bhytError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cccd.addListener(_scheduleLookup);
+  }
+
+  void _scheduleLookup() {
+    _debounce?.cancel();
+    final seq = ++_lookupSeq;
+    if (!RegExp(r'^\d{12}$').hasMatch(_cccd.text) || !_birthPicked) {
+      if (_bhyt != null || _bhytLoading || _bhytError) {
+        setState(() {
+          _bhyt = null;
+          _bhytLoading = false;
+          _bhytError = false;
+        });
+      }
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 400), () async {
+      setState(() {
+        _bhytLoading = true;
+        _bhytError = false;
+      });
+      try {
+        final r = await AuthService().bhytLookup(_cccd.text, _birthDate.toIso8601String().split('T').first);
+        if (!mounted || seq != _lookupSeq) return;
+        setState(() => _bhyt = r);
+      } catch (_) {
+        if (!mounted || seq != _lookupSeq) return;
+        setState(() {
+          _bhyt = null;
+          _bhytError = true;
+        });
+      } finally {
+        if (mounted && seq == _lookupSeq) setState(() => _bhytLoading = false);
+      }
+    });
+  }
+
   @override
   void dispose() {
     for (final c in [_email, _password, _name, _age, _phone, _address]) {
       c.dispose();
     }
+    _debounce?.cancel();
     _cccd.dispose();
     super.dispose();
   }
@@ -127,7 +179,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     firstDate: DateTime(1920),
                     lastDate: DateTime.now(),
                   );
-                  if (picked != null) setState(() => _birthDate = picked);
+                  if (picked != null) {
+                    setState(() {
+                      _birthDate = picked;
+                      _birthPicked = true;
+                    });
+                    _scheduleLookup();
+                  }
                 },
                 child: InputDecorator(
                   decoration: const InputDecoration(
@@ -137,6 +195,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Text(fmtDate(_birthDate)),
                 ),
               ),
+              const SizedBox(height: 12),
+              _bhytField(),
               const SizedBox(height: 12),
               _field(_phone, 'Số điện thoại', keyboard: TextInputType.phone, validator: _required),
               _field(_address, 'Địa chỉ', validator: _required),
@@ -154,6 +214,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Ô "Thẻ BHYT" chỉ đọc, nền xám: kết quả tra theo CCCD + ngày sinh.
+  Widget _bhytField() {
+    final scheme = Theme.of(context).colorScheme;
+    final muted = TextStyle(color: scheme.onSurfaceVariant);
+    Widget content;
+    if (_bhytError) {
+      content = Text('Không tra được, thử lại sau', style: muted);
+    } else if (_bhyt == null) {
+      content = Text('Nhập CCCD và ngày sinh để tra', style: muted);
+    } else if (_bhyt!['found'] != true) {
+      content = Text('Không tìm thấy thẻ BHYT', style: muted);
+    } else {
+      final rate = ((_bhyt!['rate'] as num) * 100).round();
+      final validTo = DateTime.parse(_bhyt!['validTo'] as String);
+      content = Text.rich(TextSpan(children: [
+        TextSpan(text: '${_bhyt!['cardNumber']} · $rate% · HSD ${fmtDate(validTo)}'),
+        if (_bhyt!['status'] == 'expired')
+          TextSpan(text: '  đã hết hạn', style: TextStyle(color: scheme.error, fontWeight: FontWeight.w600)),
+        if (_bhyt!['status'] == 'not_yet_valid')
+          TextSpan(text: '  chưa có hiệu lực', style: TextStyle(color: scheme.error, fontWeight: FontWeight.w600)),
+      ]));
+    }
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: 'Thẻ BHYT',
+        enabled: false,
+        filled: true,
+        fillColor: scheme.surfaceContainerHighest,
+        helperText: 'Tự tra theo CCCD và ngày sinh, không sửa được',
+        suffixIcon: _bhytLoading
+            ? const Padding(
+                padding: EdgeInsets.all(14),
+                child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+              )
+            : Icon(Icons.health_and_safety_outlined, color: scheme.onSurfaceVariant),
+      ),
+      child: content,
     );
   }
 

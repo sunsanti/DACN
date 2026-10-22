@@ -184,7 +184,7 @@ Thứ tự: (Phase 9 ∥ Phase 10) → **cổng duyệt `pre_implement/`** → (
 
 ## Trước khi bắt đầu
 - [ ] Duyệt spec 05 và trả lời Q1–Q6 (mục 11 của spec)
-- [ ] Duyệt Q3: thêm `@nestjs/throttler`
+- [x] Q3: dùng `@nestjs/throttler` (chỉ áp cho bhyt-lookup)
 
 ## Phase 9: Template + mockup (`ui-preview`)
 - [ ] U9.1 Tìm 2–3 template, ghi link + giấy phép vào `pre_implement/README.md`
@@ -193,14 +193,14 @@ Thứ tự: (Phase 9 ∥ Phase 10) → **cổng duyệt `pre_implement/`** → (
 - [ ] U9.4 **Bạn duyệt** → ghi "Đã duyệt" vào README
 
 ## Phase 10: Tra BHYT khi đăng ký (`register-bhyt`)
-- [ ] B10.1 `BhytLookupDto`
-- [ ] B10.2 `maskCardNumber` + unit test
-- [ ] B10.3 `POST /auth/bhyt-lookup` (`@Public`)
-- [ ] B10.4 Giới hạn 10 request/phút/IP (429)
-- [ ] B10.5 Test: có thẻ / sai ngày sinh / CCCD 11 số / mã đã che + bước smoke
-- [ ] F10.1 `AuthService.bhytLookup`
-- [ ] F10.2 Ô "Thẻ BHYT" xám, tự tra khi đủ CCCD + ngày sinh (cờ `_birthPicked`)
-- [ ] Kiểm tra: lint, test, analyze, chụp 3 ca → `screenshots/phase-10/`
+- [x] B10.1 `BhytLookupDto`
+- [x] B10.2 `maskCardNumber` + unit test
+- [x] B10.3 `POST /auth/bhyt-lookup` (`@Public`)
+- [x] B10.4 Giới hạn 10 request/phút/IP (429)
+- [x] B10.5 Test: có thẻ / sai ngày sinh / CCCD 11 số / mã đã che (unit). Smoke: kiểm tra bằng curl (có thẻ, hết hạn, sai ngày sinh, 400, 429)
+- [x] F10.1 `AuthService.bhytLookup`
+- [x] F10.2 Ô "Thẻ BHYT" xám, tự tra khi đủ CCCD + ngày sinh (cờ `_birthPicked`)
+- [x] Kiểm tra: test, analyze, chụp 2 ca → `screenshots/phase-10/`
 
 ## Phase 11: Trang chủ bệnh nhân (`patient-home`), sau cổng duyệt
 - [ ] F11.1 Widget `Bubble` trong `core/ui.dart`

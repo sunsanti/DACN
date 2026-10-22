@@ -10,6 +10,12 @@ export interface InsuranceCard {
 export type CardStatus = "none" | "valid" | "expired" | "not_yet_valid";
 
 /** Benefit rate from the card's 3rd character (Luật BHYT, đúng tuyến): 1,2,5 → 100%, 3 → 95%, 4 → 80%. */
+/** Public-safe card number: first 3 + last 4 characters, the rest masked. */
+export function maskCardNumber(number: string): string {
+    if (number.length <= 7) return "*".repeat(number.length);
+    return number.slice(0, 3) + "*".repeat(number.length - 7) + number.slice(-4);
+}
+
 export function rateFromCard(number: string): number {
     const level = number[2];
     if (level === "3") return 0.95;

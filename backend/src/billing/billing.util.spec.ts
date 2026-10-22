@@ -1,4 +1,4 @@
-import { calcBill, cardStatus, rateFromCard } from "./billing.util";
+import { calcBill, cardStatus, maskCardNumber, rateFromCard } from "./billing.util";
 
 const card = (number: string, validFrom: string, validTo: string) => ({ number, validFrom, validTo });
 const day = (s: string) => new Date(`${s}T09:00:00+07:00`);
@@ -64,5 +64,14 @@ describe("billing.util", () => {
         expect(b.insuranceCovered).toBe(147777);
         expect(b.payable).toBe(7778);
         expect(b.insuranceCovered + b.payable).toBe(b.total);
+    });
+});
+
+describe("maskCardNumber", () => {
+    it("keeps first 3 + last 4 of a 15-char card", () => {
+        expect(maskCardNumber("DN4790123451234")).toBe("DN4********1234");
+    });
+    it("masks everything when too short to keep both ends", () => {
+        expect(maskCardNumber("ABC1234")).toBe("*******");
     });
 });

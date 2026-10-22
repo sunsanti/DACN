@@ -12,6 +12,12 @@ class AuthService {
     return AuthResult.fromJson(Map<String, dynamic>.from(res.data));
   }
 
+  /// Pre-registration BHYT preview: {found:false} or {found, cardNumber (masked), rate, validTo, status}.
+  Future<Map<String, dynamic>> bhytLookup(String cccd, String birthDate) async {
+    final res = await DioClient.dio.post('/auth/bhyt-lookup', data: {'cccd': cccd, 'birthDate': birthDate});
+    return Map<String, dynamic>.from(res.data);
+  }
+
   Future<AuthResult> register({
     required String email,
     required String password,
