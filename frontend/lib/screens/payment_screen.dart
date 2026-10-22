@@ -124,7 +124,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           info('Số tiền', fmtMoney(qr.amount)),
           info('Nội dung CK', qr.content, copy: true),
           const SizedBox(height: 8),
-          _waiting('Đang chờ ngân hàng xác nhận… Màn hình sẽ tự cập nhật khi nhận được tiền.'),
+          _waiting('Đang chờ nhân viên xác nhận đã nhận tiền… Màn hình sẽ tự cập nhật.'),
         ]),
       ),
     );

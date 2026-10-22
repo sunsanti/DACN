@@ -70,9 +70,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     if (ok != true) return;
     try {
       await provider.confirm(a.id, note: noteCtrl.text.trim(), confirmDate: confirmDate);
-      _toast('Đã xác nhận lịch #${a.id}');
+      toast('Đã xác nhận lịch #${a.id}');
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
     }
   }
 
@@ -83,56 +83,23 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     if (reason == null) return;
     try {
       await provider.cancelByDoctor(a.id, reason);
-      _toast('Đã gửi tới bệnh nhân');
+      toast('Đã gửi tới bệnh nhân');
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
     }
   }
 
   Future<void> _rescheduleDoctor(Appointment a) async {
     if (a.doctorId == null) return;
     final provider = context.read<DoctorProvider>();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 90)),
-      helpText: 'Chọn ngày dời lịch',
-    );
-    if (date == null || !mounted) return;
-    final dateStr =
-        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    List<DateTime> slots;
-    try {
-      slots = await _docService.availability(a.doctorId!, dateStr);
-    } catch (e) {
-      _toast(DioClient.messageFrom(e));
-      return;
-    }
-    if (!mounted) return;
-    if (slots.isEmpty) {
-      _toast('Bạn chưa có khung trống ngày này (đăng ký ca trước)');
-      return;
-    }
-    final slot = await showDialog<DateTime>(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('Chọn khung giờ mới'),
-        children: slots
-            .map((s) => SimpleDialogOption(
-                  onPressed: () => Navigator.pop(ctx, s),
-                  child: Text(
-                      '${s.day}/${s.month} — ${s.hour.toString().padLeft(2, '0')}:${s.minute.toString().padLeft(2, '0')}'),
-                ))
-            .toList(),
-      ),
-    );
+    final slot = await pickFreeSlot(context, a.doctorId!,
+        dateHelp: 'Chọn ngày dời lịch', noSlotMsg: 'Bạn chưa có khung trống ngày này (đăng ký ca trước)');
     if (slot == null) return;
     try {
       await provider.reschedule(a.id, slot.toUtc().toIso8601String());
-      _toast('Đã dời lịch #${a.id}');
+      toast('Đã dời lịch #${a.id}');
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
     }
   }
 
@@ -142,15 +109,15 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     if (ids == null) return;
     try {
       await provider.complete(a.id, ids);
-      _toast('Đã đánh dấu khám xong lịch #${a.id}');
+      toast('Đã đánh dấu khám xong lịch #${a.id}');
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
     }
   }
 
   Future<void> _reExam(Appointment a) async {
     if (a.patientId == null || a.doctorId == null) {
-      _toast('Thiếu thông tin bệnh nhân');
+      toast('Thiếu thông tin bệnh nhân');
       return;
     }
     await Navigator.of(context).push(
@@ -169,16 +136,12 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     try {
       final pdf = await _docService.downloadReport(a.id);
       final path = await openPdf(pdf, 'report-${a.id}.pdf');
-      _toast(path != null ? 'Đã mở báo cáo' : 'Đã tải báo cáo (xem ở tab mới/Downloads)');
+      toast(path != null ? 'Đã mở báo cáo' : 'Đã tải báo cáo (xem ở tab mới/Downloads)');
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
     }
   }
 
-  void _toast(String msg) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -231,6 +194,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             ),
             const SizedBox(height: 4),
             TabBar(
+              // Natural-width tabs: equal thirds clip "Đã xác nhận (n)" on ~390 px phones.
+              isScrollable: true,
+              tabAlignment: TabAlignment.center,
               labelColor: cs.primary,
               unselectedLabelColor: cs.onSurfaceVariant,
               indicatorColor: cs.primary,

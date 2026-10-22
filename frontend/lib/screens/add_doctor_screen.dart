@@ -44,7 +44,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
         password: _password.text,
         name: _name.text.trim(),
         age: int.tryParse(_age.text) ?? 0,
-        dateOfBirth: _dob.toIso8601String().split('T').first,
+        dateOfBirth: fmtYmd(_dob),
         gender: _gender,
         phone: _phone.text.trim(),
         address: _address.text.trim(),
