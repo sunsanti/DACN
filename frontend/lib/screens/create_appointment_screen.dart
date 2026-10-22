@@ -47,8 +47,7 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
     super.dispose();
   }
 
-  String get _dateStr =>
-      '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}';
+  String get _dateStr => fmtYmd(_date);
 
   Future<void> _loadDoctors() async {
     try {
@@ -94,17 +93,15 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
     }
   }
 
-  String _hm(DateTime d) =>
-      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDoctor == null) {
-      _toast('Chưa có bác sĩ để chọn');
+      toast('Chưa có bác sĩ để chọn');
       return;
     }
     if (_selectedSlot == null) {
-      _toast('Hãy chọn một khung giờ trống');
+      toast('Hãy chọn một khung giờ trống');
       return;
     }
     setState(() => _submitting = true);
@@ -116,20 +113,16 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
             note: _note.text.trim(),
           );
       if (mounted) {
-        _toast('Đặt lịch thành công');
+        toast('Đặt lịch thành công');
         Navigator.of(context).pop();
       }
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
   }
 
-  void _toast(String m) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +243,7 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
       children: _slots.map((s) {
         final sel = _selectedSlot == s;
         return ChoiceChip(
-          label: Text(_hm(s)),
+          label: Text(fmtTime(s)),
           selected: sel,
           onSelected: (_) => setState(() => _selectedSlot = s),
         );

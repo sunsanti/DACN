@@ -83,13 +83,6 @@ class DoctorService {
     await DioClient.dio.put('/doctor/reschedule-appointment/$appointmentId', data: {'apTime': apTime});
   }
 
-  /// Free 30-min slots of a doctor on a date (for the doctor to pick a new slot).
-  Future<List<DateTime>> availability(int doctorId, String date) async {
-    final res = await DioClient.dio
-        .get('/doctor/availability', queryParameters: {'doctorId': doctorId, 'date': date});
-    return (res.data as List).map((e) => DateTime.parse(e as String).toLocal()).toList();
-  }
-
   Future<void> confirm(int appointmentId,
       {required String note, required DateTime confirmDate}) async {
     await DioClient.dio.post('/doctor/confirm-appointment/$appointmentId', data: {
