@@ -231,6 +231,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             ),
             const SizedBox(height: 4),
             TabBar(
+              // Natural-width tabs: equal thirds clip "Đã xác nhận (n)" on ~390 px phones.
+              isScrollable: true,
+              tabAlignment: TabAlignment.center,
               labelColor: cs.primary,
               unselectedLabelColor: cs.onSurfaceVariant,
               indicatorColor: cs.primary,
