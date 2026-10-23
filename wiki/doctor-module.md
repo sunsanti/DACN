@@ -23,10 +23,10 @@ tags: [doctor, shift, appointment, module]
 
 `ShiftEntity` = time-of-day templates (morning 06–12, afternoon 12–20, seeded by migration). `ShiftAssignmentEntity` = a doctor working a real-dated window with `status` (ACTIVE / CANCELED) + `duration` (double precision hours).
 
-- `registerShift(doctorId, shiftId, dateStr)` — template gives the time-of-day, `dateStr` the day → real `startTime`/`endTime`, duration = full hours.
-- `myShifts` / `shiftOverview` (all doctors) — list assignments.
+- `registerShift(doctorId, shiftId, dateStr)` — template gives the time-of-day, `dateStr` the day → real `startTime`/`endTime`, duration = full hours. Max `MAX_DOCTORS_PER_SHIFT` = 4 ACTIVE doctors per template × date (canceled ones free their place) → else 409.
+- `myShifts` / `shiftOverview` (all doctors, current week Mon 00:00 → next Mon only) — list assignments.
+- `deleteAssignment` — only an ACTIVE shift that has not started (= move it to another day); running → "chỉ có thể huỷ", ended/canceled → 400 (they hold worked hours for salary).
 - `cancelAssignment` — `status=CANCELED`, `duration = clamp(now,start,end) − start` (**pays hours actually worked**).
-- `deleteAssignment` — remove.
 - `availability(doctorId, dateStr)` — free **30-min slots** = that doctor's ACTIVE shift windows on the date, minus already-booked appointment times. Open to any authenticated user (patients book against it).
 
 ## Admin-facing (in this controller)

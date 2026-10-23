@@ -130,6 +130,11 @@ check("Bác sĩ xem ca của mình", ok(myShifts) && myShifts.data.length >= 3, 
 const toCancel = (myShifts.data.find?.((s) => JSON.stringify(s).includes(day(4))) || {});
 const cAssign = await call("POST", `/doctor/cancel-assignment/${toCancel.id}`, { token: D });
 check("Bác sĩ hủy ca (ngày +4)", ok(cAssign), msg(cAssign) + ` id=${toCancel.id}`);
+const delCanceled = await call("DELETE", `/doctor/assignment/${toCancel.id}`, { token: D });
+check("Ca đã huỷ không xoá được → 400", delCanceled.status === 400, msg(delCanceled));
+const regDel = await call("POST", "/doctor/register-shift", { token: D, body: { shiftId: morning.id, date: day(5) } });
+const delFuture = await call("DELETE", `/doctor/assignment/${regDel.data.id}`, { token: D });
+check("Xoá ca chưa bắt đầu (đổi ngày) → OK", ok(delFuture), msg(delFuture));
 const overview = await call("GET", "/doctor/shift-overview", { token: D });
 check("Xem tổng quan ca", ok(overview), msg(overview));
 
@@ -177,6 +182,16 @@ fd.append("appointmentId", String(a3));
 const t0 = Date.now();
 const rep = await call("POST", "/ai/report", { token: P, form: fd });
 check("Bệnh nhân gửi ảnh + triệu chứng → PDF", ok(rep) && rep.ct.includes("pdf"), `${rep.status} ${rep.ct} ${Buffer.isBuffer(rep.data) ? rep.data.length + "B" : JSON.stringify(rep.data).slice(0, 200)} ${Date.now() - t0}ms`);
+const fdNoSym = new FormData();
+fdNoSym.append("image", new Blob([img], { type: "image/jpeg" }), "acne.jpg");
+fdNoSym.append("appointmentId", String(a3));
+const repNoSym = await call("POST", "/ai/report", { token: P, form: fdNoSym });
+check("Gửi ảnh mà không có triệu chứng → 400", repNoSym.status === 400, msg(repNoSym));
+const fdSym = new FormData();
+fdSym.append("symptoms", "Ngứa da ở tay, nổi mẩn");
+fdSym.append("appointmentId", String(a3));
+const repSym = await call("POST", "/ai/report", { token: P, form: fdSym });
+check("Chỉ gửi triệu chứng (không ảnh) → PDF", ok(repSym) && repSym.ct.includes("pdf"), `${repSym.status} ${repSym.ct}`);
 
 // ---------- doctor appointment flow ----------
 const pend = await call("GET", "/doctor/list-unAcpappointment", { token: D });
@@ -217,6 +232,8 @@ await call("POST", "/auth/register-doctor", { token: A, form: formOf({
 const D2 = (await call("POST", "/auth/login", { body: { email: otherDocEmail, password: "Test@123" } })).data.accessToken;
 const idor = await call("POST", `/doctor/cancel-appointment/${a1}`, { token: D2, body: { reason: "hack" } });
 check("Bác sĩ khác không hủy được lịch người khác (IDOR)", !ok(idor), msg(idor));
+const idorPdf = await call("GET", `/doctor/report/${a3}`, { token: D2 });
+check("Bác sĩ khác không tải được báo cáo AI người khác (IDOR)", idorPdf.status === 403, msg(idorPdf));
 
 // patient cancel
 const pc = await call("POST", `/patient/cancel-appointment/${a1}`, { token: P, body: { reason: "Bận việc" } });
@@ -236,6 +253,30 @@ check("Admin sửa thông tin bác sĩ", ok(du), msg(du));
 const db = new pg.Client({ host: process.env.DB_HOST ?? "localhost", port: Number(process.env.DB_PORT ?? 5432),
   user: process.env.DB_USER ?? "postgres", password: process.env.DB_PASSWORD ?? "123456", database: process.env.DB_NAME ?? "dacn_db" });
 await db.connect();
+
+// shift cap: D takes a place, 3 filler rows (no doctor) make it 4/4 → D2 is refused
+const capReg = await call("POST", "/doctor/register-shift", { token: D, body: { shiftId: morning.id, date: day(80) } });
+await db.query(`INSERT INTO "shiftAssignment" (type, "startTime", "endTime", status, duration, "shiftId")
+  SELECT type, "startTime", "endTime", status, duration, "shiftId" FROM "shiftAssignment", generate_series(1, 3) WHERE id = $1`, [capReg.data.id]);
+const capTpl = await call("GET", `/doctor/shift-templates?date=${day(80)}`, { token: D });
+const capM = capTpl.data.find?.((t) => t.id === morning.id) ?? {};
+check("Mẫu ca theo ngày có số người / tối đa", capM.registered === 4 && capM.capacity === 4, JSON.stringify(capM));
+const capFull = await call("POST", "/doctor/register-shift", { token: D2, body: { shiftId: morning.id, date: day(80) } });
+check("Ca đủ 4 bác sĩ → 409", capFull.status === 409, msg(capFull));
+await db.query(`DELETE FROM "shiftAssignment" WHERE "doctorId" IS NULL AND "startTime" = (SELECT "startTime" FROM "shiftAssignment" WHERE id = $1)`, [capReg.data.id]);
+// a running shift (started 1h ago, ends in 1h) can only be canceled, not deleted
+const runReg = await call("POST", "/doctor/register-shift", { token: D, body: { shiftId: morning.id, date: day(6) } });
+// JS Dates (not SQL now()): the column has no time zone and the DB container runs in UTC
+await db.query(`UPDATE "shiftAssignment" SET "startTime" = $2, "endTime" = $3 WHERE id = $1`,
+  [runReg.data.id, new Date(Date.now() - 36e5), new Date(Date.now() + 36e5)]);
+const delRunning = await call("DELETE", `/doctor/assignment/${runReg.data.id}`, { token: D });
+check("Ca đang diễn ra không xoá được → 400", delRunning.status === 400 && /đang diễn ra/.test(delRunning.data.message), msg(delRunning));
+const ov = await call("GET", "/doctor/shift-overview", { token: D });
+const weekStart = new Date(); weekStart.setHours(0, 0, 0, 0); weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
+check("Tất cả ca trực chỉ có ca trong tuần này", ok(ov) && ov.data.every((s) => new Date(s.startTime) >= weekStart && new Date(s.startTime) < weekEnd)
+  && ov.data.some((s) => s.id === runReg.data.id), `${ov.status} n=${ov.data.length}`);
+
 const EXAM = 150000;
 const bhyt = {}; // tag → {cccd, birthDate}
 for (const [tag, level, from, to] of [["80", "4", "2026-01-01", "2030-12-31"], ["full", "1", "2026-01-01", "2030-12-31"],
@@ -455,6 +496,8 @@ await call("DELETE", `/news/${n2.data.id}`, { token: A });
 // keep the shared price list clean: this run's test diseases (bills keep name/price snapshots, no FK)
 await db.query(`DELETE FROM disease WHERE name LIKE $1`, [`% ${run}`]);
 await db.query(`DELETE FROM bhyt_registry WHERE "fullName" LIKE 'BHYT %' AND cccd LIKE $1`, [`9${String(run).slice(-8)}%`]);
+// free this run's places on future shifts (max 4 doctors/shift), else repeated runs fill them up
+await db.query(`UPDATE "shiftAssignment" SET status = 'CANCELED' WHERE "doctorId" = $1 AND status = 'ACTIVE'`, [myDoc.id]);
 await db.end();
 
 console.log(results.join("\n"));

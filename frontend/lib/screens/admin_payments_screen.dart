@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/billing_ui.dart';
@@ -41,11 +43,21 @@ class _PaymentListState extends State<_PaymentList> {
   final _service = PaymentService();
   List<Appointment>? _items;
   String? _error;
+  Timer? _poll;
 
   @override
   void initState() {
     super.initState();
     _load();
+    // Patients pick / change cash↔QR at any time: keep the list (method, new bills) current.
+    // ponytail: 5 s polling, push (websocket) if it ever needs to be instant at scale.
+    _poll = Timer.periodic(const Duration(seconds: 5), (_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -58,7 +70,8 @@ class _PaymentListState extends State<_PaymentList> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = DioClient.messageFrom(e));
+      // keep showing the last good list if a background refresh fails
+      if (mounted && _items == null) setState(() => _error = DioClient.messageFrom(e));
     }
   }
 

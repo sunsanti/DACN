@@ -43,59 +43,20 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
   }
 
-  String _fmt(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} '
-      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
-  void _toast(String m) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
-  }
 
   Future<void> _reschedule(Appointment a) async {
     if (a.doctorId == null) return;
-    final date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 90)),
-      helpText: 'Chọn ngày khám mới',
-    );
-    if (date == null || !mounted) return;
-    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    List<DateTime> slots;
-    try {
-      slots = await _service.availability(a.doctorId!, dateStr);
-    } catch (e) {
-      _toast(DioClient.messageFrom(e));
-      return;
-    }
-    if (!mounted) return;
-    if (slots.isEmpty) {
-      _toast('Bác sĩ chưa có khung trống ngày này');
-      return;
-    }
-    final slot = await showDialog<DateTime>(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('Chọn khung giờ mới'),
-        children: slots
-            .map((s) => SimpleDialogOption(
-                  onPressed: () => Navigator.pop(ctx, s),
-                  child: Text(
-                      '${s.day}/${s.month} — ${s.hour.toString().padLeft(2, '0')}:${s.minute.toString().padLeft(2, '0')}'),
-                ))
-            .toList(),
-      ),
-    );
+    final slot = await pickFreeSlot(context, a.doctorId!,
+        dateHelp: 'Chọn ngày khám mới', noSlotMsg: 'Bác sĩ chưa có khung trống ngày này');
     if (slot == null) return;
     try {
       await _service.rescheduleAppointment(a.id, apTime: slot.toUtc().toIso8601String());
       if (mounted) context.read<AppointmentProvider>().load();
       await _load();
-      _toast('Đã đổi lịch (chờ bác sĩ xác nhận lại)');
+      toast('Đã đổi lịch (chờ bác sĩ xác nhận lại)');
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
     }
   }
 
@@ -107,9 +68,9 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       await _service.cancelAppointment(a.id, reason);
       if (mounted) context.read<AppointmentProvider>().load();
       await _load();
-      _toast('Đã hủy lịch');
+      toast('Đã hủy lịch');
     } catch (e) {
-      _toast(DioClient.messageFrom(e));
+      toast(DioClient.messageFrom(e));
     }
   }
 
@@ -141,7 +102,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
           title: Text('BS. ${a.doctorName}', style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: const Text('Bác sĩ phụ trách'),
         ),
-        _row('Thời gian', _fmt(a.apTime)),
+        _row('Thời gian', fmtDateTime(a.apTime)),
         _row('Địa chỉ', a.address),
         _row('Trạng thái', a.statusLabel),
         if (a.hasBill) ...[

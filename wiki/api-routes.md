@@ -56,11 +56,11 @@ Doctor-only (`@Roles('doctor')`):
 | PUT | `/doctor/reschedule-appointment/:id` | `{apTime}` — move a confirmed appt to a free slot of the doctor's availability; once; stays confirmed |
 | POST | `/doctor/re-examination` | Create a new confirmed appointment for a patient |
 | DELETE | `/doctor/appointment/:id` | Hard-delete (legacy; UI uses cancel) |
-| GET | `/doctor/report/:appointmentId` | Download the patient's AI report PDF |
-| GET | `/doctor/shift-templates` | Morning/afternoon time-of-day templates |
-| POST | `/doctor/register-shift` | `{shiftId, date}` → ACTIVE assignment on a real date |
+| GET | `/doctor/report/:appointmentId` | Download the patient's AI report PDF (own appointments only, `assertOwns` → 403) |
+| GET | `/doctor/shift-templates?date=` | Time-of-day templates; with `date` each also has `registered`/`capacity` (max 4 doctors) |
+| POST | `/doctor/register-shift` | `{shiftId, date}` → ACTIVE assignment on a real date; 409 if that shift already has 4 ACTIVE doctors |
 | GET | `/doctor/my-shifts` | This doctor's shift assignments |
-| GET | `/doctor/shift-overview` | (`doctor`/`admin`) All shifts + which doctor |
+| GET | `/doctor/shift-overview` | (`doctor`/`admin`) ACTIVE shifts of the current week (Mon → Sun) + which doctor |
 | POST | `/doctor/cancel-assignment/:id` | Cancel → pays hours worked (clamp now to [start,end]−start) |
 | DELETE | `/doctor/assignment/:id` | Delete an assignment |
 
@@ -108,7 +108,7 @@ Proxy to the Python AI service (`AI_SERVICE_URL`, default `:8000`). See [[ai-int
 | --- | --- | --- | --- |
 | POST | `/ai/diagnose-image` | authenticated | multipart `image` → top-3 (Swin V2 `.pth`) |
 | POST | `/ai/chat` | authenticated | `{symptoms}` → top-3 (Gemini) |
-| POST | `/ai/report` | `patient` | multipart `image` + `symptoms` + `appointmentId` → PDF; saves `medical_report`; appointment ownership-checked (IDOR guard) |
+| POST | `/ai/report` | `patient` | multipart `symptoms` (required, else 400) + optional `image` + `appointmentId` → PDF; saves `medical_report`; appointment ownership-checked (IDOR guard) |
 
 ## Conventions
 

@@ -9,15 +9,12 @@ import {
     Res,
     NotFoundException,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiQuery, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { DoctorService } from "./doctor.service";
 import { DoctorEntity } from "./entities/doctor.entity";
-import { CancelShiftDto } from "./dto/cancelShift.dto";
 import { AppointmentEntity } from "src/patient/entities/appointment.entity";
 import { ConfirmAppointmentDTO } from "./dto/confirm.dto";
-import { ReAppointmentDTO } from "./dto/RA.dto";
-import { ShiftListDTO } from "./dto/shiftList.dto";
 import { UpdateDoctorDTO } from "./dto/update-doctor.dto";
 import { ReExaminationDTO } from "./dto/reExamination.dto";
 import { CompleteDTO } from "./dto/complete.dto";
@@ -110,24 +107,6 @@ export class DoctorController {
             user.doctorId!, appointmentId, confirmDto.note, confirmDto.confirmDate);
     }
 
-    @Roles('doctor')
-    @Post('/reAppointment/:id')
-    reAppointment(
-        @CurrentUser() user: JwtPayload,
-        @Param('id', ParseIntPipe) reAppointmentId: number,
-        @Body() reAppointmentDto: ReAppointmentDTO,
-    ): Promise<AppointmentEntity> {
-        const { newApTime, newConfirmTime, newNote } = reAppointmentDto;
-        return this.doctorService.reAppointment(
-            user.doctorId!, reAppointmentId, newApTime, newConfirmTime, newNote);
-    }
-
-    @Roles('doctor')
-    @Delete('/appointment/:id')
-    deleteAppointment(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
-        return this.doctorService.deleteAppointment(user.doctorId!, id);
-    }
-
     /** Reject (pending) or cancel (confirmed) an appointment with a reason → sent to patient. */
     @Roles('doctor')
     @Post('/cancel-appointment/:id')
@@ -154,10 +133,11 @@ export class DoctorController {
     @Roles('doctor')
     @Get('/report/:appointmentId')
     async getReport(
+        @CurrentUser() user: JwtPayload,
         @Param('appointmentId', ParseIntPipe) appointmentId: number,
         @Res() res: Response,
     ) {
-        const pdf = await this.doctorService.getReport(appointmentId);
+        const pdf = await this.doctorService.getReport(user.doctorId!, appointmentId);
         if (!pdf) throw new NotFoundException('Chưa có báo cáo AI cho lịch này');
         res.set({
             'Content-Type': 'application/pdf',
@@ -170,23 +150,10 @@ export class DoctorController {
     // --- doctor-only: shift management (doctorId from the token) ---
 
     @Roles('doctor')
-    @Post('/addShift')
-    addWorkingTime(@CurrentUser() user: JwtPayload, @Body() body: ShiftListDTO) {
-        return this.doctorService.addWorkingTime(user.doctorId!, body.shifts);
-    }
-
-    @Roles('doctor')
-    @Get('/list-shift')
-    listOfShift(@CurrentUser() user: JwtPayload) {
-        return this.doctorService.listOfShifts(user.doctorId!);
-    }
-
-    // ---- clean shift API used by the doctor app ----
-
-    @Roles('doctor')
     @Get('/shift-templates')
-    shiftTemplates() {
-        return this.doctorService.listShiftTemplates();
+    @ApiQuery({ name: 'date', required: false, description: 'YYYY-MM-DD: thêm registered/capacity cho ngày đó' })
+    shiftTemplates(@Query('date') date?: string) {
+        return this.doctorService.listShiftTemplates(date);
     }
 
     @Roles('doctor')
@@ -227,20 +194,5 @@ export class DoctorController {
     @Delete('/assignment/:id')
     deleteAssignment(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
         return this.doctorService.deleteAssignment(user.doctorId!, id);
-    }
-
-    @Roles('doctor')
-    @Post('/cancel-shift')
-    cancelShift(@CurrentUser() user: JwtPayload, @Body() body: CancelShiftDto): Promise<void> {
-        return this.doctorService.cancelShift(user.doctorId!, body.shiftId);
-    }
-
-    @Roles('doctor')
-    @Delete('/delete-shift/:shiftId')
-    deleteShift(
-        @CurrentUser() user: JwtPayload,
-        @Param('shiftId', ParseIntPipe) shiftId: number,
-    ) {
-        return this.doctorService.deleteShift(user.doctorId!, shiftId);
     }
 }

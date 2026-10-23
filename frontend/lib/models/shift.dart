@@ -17,22 +17,30 @@ class ShiftTemplate {
   final String type;
   final DateTime startTime;
   final DateTime endTime;
+  // Only filled when templates are fetched for a date.
+  final int registered;
+  final int? capacity;
 
   ShiftTemplate({
     required this.id,
     required this.type,
     required this.startTime,
     required this.endTime,
+    this.registered = 0,
+    this.capacity,
   });
 
   String get typeLabel => shiftTypeLabel(type);
   double get hours => endTime.difference(startTime).inMinutes / 60.0;
+  bool get isFull => capacity != null && registered >= capacity!;
 
   factory ShiftTemplate.fromJson(Map<String, dynamic> json) => ShiftTemplate(
         id: json['id'] as int,
         type: (json['type'] ?? '') as String,
         startTime: DateTime.parse(json['startTime'] as String),
         endTime: DateTime.parse(json['endTime'] as String),
+        registered: (json['registered'] ?? 0) as int,
+        capacity: json['capacity'] as int?,
       );
 }
 
@@ -56,6 +64,8 @@ class ShiftAssignment {
   });
 
   bool get isActive => status == 'ACTIVE';
+  /// ACTIVE and already past its end time → the shift was fully worked.
+  bool get isDone => isActive && endTime.isBefore(DateTime.now());
   String get statusLabel => const {'ACTIVE': 'Hoạt động', 'CANCELED': 'Đã hủy', 'REPLACED': 'Đã thay thế'}[status] ?? status;
   String get typeLabel => shiftTypeLabel(type);
 
