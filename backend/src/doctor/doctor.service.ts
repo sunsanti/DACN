@@ -14,6 +14,9 @@ import { AppointmentItemEntity } from "../patient/entities/appointment_item.enti
 import { calcBill } from "../billing/billing.util";
 import { BhytService } from "../billing/bhyt.service";
 
+/** Max ACTIVE doctors on one shift (template × date). */
+const MAX_DOCTORS_PER_SHIFT = 4;
+
 @Injectable()
 export class DoctorService {
     constructor(
@@ -61,9 +64,37 @@ export class DoctorService {
 
     // ---- shift management (clean API used by the doctor app) ----
 
-    /** Available shift slot templates (morning/afternoon). */
-    listShiftTemplates(): Promise<ShiftEntity[]> {
-        return this.shiftRepo.find({ order: { startTime: "ASC" } });
+    /**
+     * Available shift slot templates (morning/afternoon/evening). With `dateStr`, each one
+     * also carries how many doctors registered it that day and the cap.
+     */
+    async listShiftTemplates(dateStr?: string) {
+        const templates = await this.shiftRepo.find({ order: { startTime: "ASC" } });
+        if (!dateStr) return templates;
+        if (!/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateStr)) throw new BadRequestException("Ngày phải có dạng YYYY-MM-DD");
+        return Promise.all(
+            templates.map(async (t) => ({
+                ...t,
+                registered: await this.countRegistered(t.id, this.shiftWindow(t, dateStr).start),
+                capacity: MAX_DOCTORS_PER_SHIFT,
+            })),
+        );
+    }
+
+    /** The template's time-of-day placed on a real date (YYYY-MM-DD). */
+    private shiftWindow(template: ShiftEntity, dateStr: string) {
+        const tStart = new Date(template.startTime);
+        const tEnd = new Date(template.endTime);
+        const [y, m, d] = dateStr.split("-").map(Number);
+        return {
+            start: new Date(y, m - 1, d, tStart.getHours(), tStart.getMinutes(), 0, 0),
+            end: new Date(y, m - 1, d, tEnd.getHours(), tEnd.getMinutes(), 0, 0),
+        };
+    }
+
+    /** ACTIVE doctors on this template at this start time (canceled ones free their place). */
+    private countRegistered(shiftId: number, start: Date): Promise<number> {
+        return this.shiftAssignmentRepo.count({ where: { shift: { id: shiftId }, status: "ACTIVE", startTime: start } });
     }
 
     /**
@@ -74,17 +105,16 @@ export class DoctorService {
         const template = await this.shiftRepo.findOne({ where: { id: shiftId } });
         if (!template) throw new NotFoundException("Mẫu ca trực không tồn tại");
 
-        const tStart = new Date(template.startTime);
-        const tEnd = new Date(template.endTime);
-        const [y, m, d] = dateStr.split("-").map(Number);
-        const start = new Date(y, m - 1, d, tStart.getHours(), tStart.getMinutes(), 0, 0);
-        const end = new Date(y, m - 1, d, tEnd.getHours(), tEnd.getMinutes(), 0, 0);
+        const { start, end } = this.shiftWindow(template, dateStr);
         const duration = Math.max(0, (end.getTime() - start.getTime()) / 3_600_000);
         if (start.getTime() < Date.now()) throw new BadRequestException("Không thể đăng ký ca đã bắt đầu hoặc đã qua");
         const dup = await this.shiftAssignmentRepo.findOne({
             where: { doctor: { id: doctorId }, status: "ACTIVE", startTime: start },
         });
         if (dup) throw new ConflictException("Bạn đã đăng ký ca này rồi");
+        // ponytail: check-then-insert, two doctors registering at once can make it 5; lock the template row if that matters.
+        if ((await this.countRegistered(shiftId, start)) >= MAX_DOCTORS_PER_SHIFT)
+            throw new ConflictException(`Ca này đã đủ ${MAX_DOCTORS_PER_SHIFT} bác sĩ`);
 
         return this.shiftAssignmentRepo.save({
             doctor: { id: doctorId } as DoctorEntity,

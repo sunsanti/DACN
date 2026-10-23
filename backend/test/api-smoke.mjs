@@ -236,6 +236,18 @@ check("Admin sửa thông tin bác sĩ", ok(du), msg(du));
 const db = new pg.Client({ host: process.env.DB_HOST ?? "localhost", port: Number(process.env.DB_PORT ?? 5432),
   user: process.env.DB_USER ?? "postgres", password: process.env.DB_PASSWORD ?? "123456", database: process.env.DB_NAME ?? "dacn_db" });
 await db.connect();
+
+// shift cap: D takes a place, 3 filler rows (no doctor) make it 4/4 → D2 is refused
+const capReg = await call("POST", "/doctor/register-shift", { token: D, body: { shiftId: morning.id, date: day(80) } });
+await db.query(`INSERT INTO "shiftAssignment" (type, "startTime", "endTime", status, duration, "shiftId")
+  SELECT type, "startTime", "endTime", status, duration, "shiftId" FROM "shiftAssignment", generate_series(1, 3) WHERE id = $1`, [capReg.data.id]);
+const capTpl = await call("GET", `/doctor/shift-templates?date=${day(80)}`, { token: D });
+const capM = capTpl.data.find?.((t) => t.id === morning.id) ?? {};
+check("Mẫu ca theo ngày có số người / tối đa", capM.registered === 4 && capM.capacity === 4, JSON.stringify(capM));
+const capFull = await call("POST", "/doctor/register-shift", { token: D2, body: { shiftId: morning.id, date: day(80) } });
+check("Ca đủ 4 bác sĩ → 409", capFull.status === 409, msg(capFull));
+await db.query(`DELETE FROM "shiftAssignment" WHERE "doctorId" IS NULL AND "startTime" = (SELECT "startTime" FROM "shiftAssignment" WHERE id = $1)`, [capReg.data.id]);
+
 const EXAM = 150000;
 const bhyt = {}; // tag → {cccd, birthDate}
 for (const [tag, level, from, to] of [["80", "4", "2026-01-01", "2030-12-31"], ["full", "1", "2026-01-01", "2030-12-31"],
@@ -455,6 +467,8 @@ await call("DELETE", `/news/${n2.data.id}`, { token: A });
 // keep the shared price list clean: this run's test diseases (bills keep name/price snapshots, no FK)
 await db.query(`DELETE FROM disease WHERE name LIKE $1`, [`% ${run}`]);
 await db.query(`DELETE FROM bhyt_registry WHERE "fullName" LIKE 'BHYT %' AND cccd LIKE $1`, [`9${String(run).slice(-8)}%`]);
+// free this run's places on future shifts (max 4 doctors/shift), else repeated runs fill them up
+await db.query(`UPDATE "shiftAssignment" SET status = 'CANCELED' WHERE "doctorId" = $1 AND status = 'ACTIVE'`, [myDoc.id]);
 await db.end();
 
 console.log(results.join("\n"));

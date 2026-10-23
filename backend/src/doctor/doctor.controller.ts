@@ -9,7 +9,7 @@ import {
     Res,
     NotFoundException,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiQuery, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { DoctorService } from "./doctor.service";
 import { DoctorEntity } from "./entities/doctor.entity";
@@ -150,8 +150,9 @@ export class DoctorController {
 
     @Roles('doctor')
     @Get('/shift-templates')
-    shiftTemplates() {
-        return this.doctorService.listShiftTemplates();
+    @ApiQuery({ name: 'date', required: false, description: 'YYYY-MM-DD: thêm registered/capacity cho ngày đó' })
+    shiftTemplates(@Query('date') date?: string) {
+        return this.doctorService.listShiftTemplates(date);
     }
 
     @Roles('doctor')

@@ -23,7 +23,7 @@ tags: [doctor, shift, appointment, module]
 
 `ShiftEntity` = time-of-day templates (morning 06–12, afternoon 12–20, seeded by migration). `ShiftAssignmentEntity` = a doctor working a real-dated window with `status` (ACTIVE / CANCELED) + `duration` (double precision hours).
 
-- `registerShift(doctorId, shiftId, dateStr)` — template gives the time-of-day, `dateStr` the day → real `startTime`/`endTime`, duration = full hours.
+- `registerShift(doctorId, shiftId, dateStr)` — template gives the time-of-day, `dateStr` the day → real `startTime`/`endTime`, duration = full hours. Max `MAX_DOCTORS_PER_SHIFT` = 4 ACTIVE doctors per template × date (canceled ones free their place) → else 409.
 - `myShifts` / `shiftOverview` (all doctors) — list assignments.
 - `cancelAssignment` — `status=CANCELED`, `duration = clamp(now,start,end) − start` (**pays hours actually worked**).
 - `deleteAssignment` — remove.

@@ -40,28 +40,7 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
 
 
   Future<void> _register() async {
-    List<ShiftTemplate> templates;
-    try {
-      templates = await _service.shiftTemplates();
-    } catch (e) {
-      toast(DioClient.messageFrom(e));
-      return;
-    }
-    if (!mounted) return;
-    final picked = await showDialog<ShiftTemplate>(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('Chọn ca trực'),
-        children: templates
-            .map((t) => SimpleDialogOption(
-                  onPressed: () => Navigator.pop(ctx, t),
-                  child: Text('${t.typeLabel} '
-                      '(${t.hours.toStringAsFixed(0)}h)'),
-                ))
-            .toList(),
-      ),
-    );
-    if (picked == null || !mounted) return;
+    // Date first, so the dialog can show which shifts are already full that day.
     final date = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -71,6 +50,32 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
     );
     if (date == null) return;
     final dateStr = fmtYmd(date);
+    List<ShiftTemplate> templates;
+    try {
+      templates = await _service.shiftTemplates(date: dateStr);
+    } catch (e) {
+      toast(DioClient.messageFrom(e));
+      return;
+    }
+    if (!mounted) return;
+    final picked = await showDialog<ShiftTemplate>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text('Chọn ca trực ngày $dateStr'),
+        children: templates
+            .map((t) => SimpleDialogOption(
+                  onPressed: t.isFull ? null : () => Navigator.pop(ctx, t),
+                  child: Text(
+                    '${t.typeLabel} (${t.hours.toStringAsFixed(0)}h)'
+                    '${t.capacity == null ? '' : ' · ${t.registered}/${t.capacity}'}'
+                    '${t.isFull ? ' · Đã đủ người' : ''}',
+                    style: t.isFull ? const TextStyle(color: Colors.grey) : null,
+                  ),
+                ))
+            .toList(),
+      ),
+    );
+    if (picked == null || !mounted) return;
     try {
       await _service.registerShift(picked.id, dateStr);
       toast('Đã đăng ký ca ${picked.typeLabel} ngày $dateStr');

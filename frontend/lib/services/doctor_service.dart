@@ -6,8 +6,10 @@ import '../models/shift.dart';
 
 class DoctorService {
   // ---- shifts ----
-  Future<List<ShiftTemplate>> shiftTemplates() async {
-    final res = await DioClient.dio.get('/doctor/shift-templates');
+  /// With [date] (yyyy-MM-dd) each template also says how full it is that day.
+  Future<List<ShiftTemplate>> shiftTemplates({String? date}) async {
+    final res = await DioClient.dio.get('/doctor/shift-templates',
+        queryParameters: date == null ? null : {'date': date});
     return (res.data as List)
         .map((e) => ShiftTemplate.fromJson(Map<String, dynamic>.from(e)))
         .toList();

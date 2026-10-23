@@ -57,8 +57,8 @@ Doctor-only (`@Roles('doctor')`):
 | POST | `/doctor/re-examination` | Create a new confirmed appointment for a patient |
 | DELETE | `/doctor/appointment/:id` | Hard-delete (legacy; UI uses cancel) |
 | GET | `/doctor/report/:appointmentId` | Download the patient's AI report PDF |
-| GET | `/doctor/shift-templates` | Morning/afternoon time-of-day templates |
-| POST | `/doctor/register-shift` | `{shiftId, date}` → ACTIVE assignment on a real date |
+| GET | `/doctor/shift-templates?date=` | Time-of-day templates; with `date` each also has `registered`/`capacity` (max 4 doctors) |
+| POST | `/doctor/register-shift` | `{shiftId, date}` → ACTIVE assignment on a real date; 409 if that shift already has 4 ACTIVE doctors |
 | GET | `/doctor/my-shifts` | This doctor's shift assignments |
 | GET | `/doctor/shift-overview` | (`doctor`/`admin`) All shifts + which doctor |
 | POST | `/doctor/cancel-assignment/:id` | Cancel → pays hours worked (clamp now to [start,end]−start) |
