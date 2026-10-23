@@ -35,3 +35,22 @@ screenshots/**/smoke-result.txt
 
 # Test accounts tied to the local dacn_db
 TAI_KHOAN_TEST.md
+
+# Repo = source + README only. Planning / docs / evidence stay local.
+/plans/
+/spec/
+/wiki/
+/pre_implement/
+/screenshots/
+/TODO.md
+/note.txt
+/HUONG-DAN-CHAY.md
+/CLAUDE.md
+
+# Personal / editor files
+/.zshrc
+/.vscode/
+
+# Stray root npm files (backend/ has its own package.json)
+/package.json
+/package-lock.json
