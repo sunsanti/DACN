@@ -40,6 +40,15 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
   late AppointmentFilter _filter = widget.initialFilter;
 
   @override
+  void initState() {
+    super.initState();
+    // The list may be stale (doctor confirmed/completed since home loaded it) → refresh on open.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AppointmentProvider>().load();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppointmentProvider>();
     final list = provider.appointments.where(_filter.test).toList();
@@ -101,9 +110,13 @@ class AppointmentTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       child: InkWell(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => AppointmentDetailScreen(appointmentId: a.id)),
-        ),
+        onTap: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => AppointmentDetailScreen(appointmentId: a.id)),
+          );
+          // paid / canceled / rescheduled inside the detail screen → refresh the list
+          if (context.mounted) context.read<AppointmentProvider>().load();
+        },
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
           child: Column(
