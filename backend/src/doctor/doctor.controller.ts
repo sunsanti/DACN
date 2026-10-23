@@ -133,10 +133,11 @@ export class DoctorController {
     @Roles('doctor')
     @Get('/report/:appointmentId')
     async getReport(
+        @CurrentUser() user: JwtPayload,
         @Param('appointmentId', ParseIntPipe) appointmentId: number,
         @Res() res: Response,
     ) {
-        const pdf = await this.doctorService.getReport(appointmentId);
+        const pdf = await this.doctorService.getReport(user.doctorId!, appointmentId);
         if (!pdf) throw new NotFoundException('Chưa có báo cáo AI cho lịch này');
         res.set({
             'Content-Type': 'application/pdf',

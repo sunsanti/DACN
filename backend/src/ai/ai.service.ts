@@ -1,4 +1,4 @@
-import { ForbiddenException, HttpException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, HttpException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
@@ -62,6 +62,8 @@ export class AiService {
         appointmentId?: number,
         patientId?: number,
     ): Promise<Buffer> {
+        // Symptoms are required, the image is optional (symptoms only, or symptoms + image).
+        if (!symptoms?.trim()) throw new BadRequestException("Hãy mô tả triệu chứng");
         // Verify the appointment belongs to the requesting patient BEFORE doing any
         // work, so a patient cannot attach a report to someone else's appointment.
         if (appointmentId) {

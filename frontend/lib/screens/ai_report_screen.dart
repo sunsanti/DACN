@@ -43,9 +43,10 @@ class _AiReportScreenState extends State<AiReportScreen> {
   }
 
   Future<void> _submit() async {
-    if (_imageBytes == null) {
+    // Symptoms are required; the image is optional.
+    if (_symptoms.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Hãy chọn ảnh trước')),
+        const SnackBar(content: Text('Hãy mô tả triệu chứng')),
       );
       return;
     }
@@ -55,7 +56,7 @@ class _AiReportScreenState extends State<AiReportScreen> {
     });
     try {
       final Uint8List pdf = await _ai.buildReport(
-        imageBytes: _imageBytes!,
+        imageBytes: _imageBytes,
         filename: _imageName,
         symptoms: _symptoms.text.trim(),
         appointmentId: widget.appointment.id,
@@ -86,9 +87,24 @@ class _AiReportScreenState extends State<AiReportScreen> {
             Text('Bác sĩ: ${widget.appointment.doctorName}'),
             const SizedBox(height: 12),
             if (_imageBytes != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.memory(_imageBytes!, height: 200, fit: BoxFit.cover),
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(_imageBytes!,
+                        height: 200, width: double.infinity, fit: BoxFit.cover),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: IconButton.filled(
+                      tooltip: 'Bỏ ảnh',
+                      style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: _submitting ? null : () => setState(() => _imageBytes = null),
+                    ),
+                  ),
+                ],
               )
             else
               Container(
@@ -98,7 +114,7 @@ class _AiReportScreenState extends State<AiReportScreen> {
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text('Chưa chọn ảnh'),
+                child: const Text('Chưa chọn ảnh (không bắt buộc)'),
               ),
             const SizedBox(height: 12),
             Row(
@@ -125,7 +141,7 @@ class _AiReportScreenState extends State<AiReportScreen> {
               controller: _symptoms,
               maxLines: 4,
               decoration: const InputDecoration(
-                labelText: 'Mô tả triệu chứng',
+                labelText: 'Mô tả triệu chứng *',
               ),
             ),
             const SizedBox(height: 24),

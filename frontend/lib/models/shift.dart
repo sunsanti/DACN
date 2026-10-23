@@ -64,6 +64,8 @@ class ShiftAssignment {
   });
 
   bool get isActive => status == 'ACTIVE';
+  /// ACTIVE and already past its end time → the shift was fully worked.
+  bool get isDone => isActive && endTime.isBefore(DateTime.now());
   String get statusLabel => const {'ACTIVE': 'Hoạt động', 'CANCELED': 'Đã hủy', 'REPLACED': 'Đã thay thế'}[status] ?? status;
   String get typeLabel => shiftTypeLabel(type);
 

@@ -39,7 +39,7 @@ class _ShiftOverviewScreenState extends State<ShiftOverviewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Tất cả ca trực')),
+      appBar: AppBar(title: const Text('Ca trực tuần này')),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
@@ -47,7 +47,7 @@ class _ShiftOverviewScreenState extends State<ShiftOverviewScreen> {
             : _error != null
                 ? ListView(children: [const SizedBox(height: 120), Center(child: Text('Lỗi: $_error'))])
                 : _shifts.isEmpty
-                    ? ListView(children: const [SizedBox(height: 120), Center(child: Text('Chưa có ca trực nào'))])
+                    ? ListView(children: const [SizedBox(height: 120), Center(child: Text('Tuần này chưa có ca trực nào'))])
                     : ListView.separated(
                         padding: const EdgeInsets.all(12),
                         itemCount: _shifts.length,
@@ -60,6 +60,12 @@ class _ShiftOverviewScreenState extends State<ShiftOverviewScreen> {
                               title: Text('BS. ${s.doctorName} — ${s.dateLabel}'),
                               subtitle: Text(
                                   'Ca ${s.typeLabel} · ${s.timeLabel} · ${s.duration.toStringAsFixed(1)}h'),
+                              trailing: s.isDone
+                                  ? const Tooltip(
+                                      message: 'Đã hoàn thành',
+                                      child: Icon(Icons.check_circle, color: Colors.green),
+                                    )
+                                  : null,
                             ),
                           );
                         },

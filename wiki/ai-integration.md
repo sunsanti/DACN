@@ -35,7 +35,7 @@ còn lại là chạy thực tế (cần tạo venv Windows + Gemini key).
 | --- | --- | --- | --- |
 | POST | `/ai/diagnose-image` | multipart `image` | Top-3 bệnh từ model ảnh |
 | POST | `/ai/chat` | JSON `{symptoms}` | Top-3 bệnh từ Gemini |
-| POST | `/ai/report` | multipart `image` + field `symptoms` | Gộp 2 nguồn → **PDF** cho bác sĩ |
+| POST | `/ai/report` | multipart field `symptoms` (bắt buộc) + `image` (tuỳ chọn) | Triệu chứng, có ảnh thì gộp thêm → **PDF** cho bác sĩ |
 
 NestJS gọi sang Python service tại `AI_SERVICE_URL` (mặc định `http://localhost:8000`).
 

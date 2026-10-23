@@ -155,7 +155,12 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
         title: Text('Ca ${s.typeLabel} — ${s.dateLabel}'),
         subtitle: Text('${s.timeLabel} · ${fmtHours(s.duration)} · ${s.statusLabel}',
             style: TextStyle(color: s.isActive ? Colors.green : Colors.grey)),
-        trailing: Row(
+        trailing: s.isDone
+            ? const Tooltip(
+                message: 'Đã hoàn thành',
+                child: Icon(Icons.check_circle, color: Colors.green),
+              )
+            : Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (s.isActive)
@@ -164,11 +169,14 @@ class _DoctorShiftsScreenState extends State<DoctorShiftsScreen> {
                 icon: const Icon(Icons.cancel, color: Colors.orange),
                 onPressed: () => _cancel(s),
               ),
-            IconButton(
-              tooltip: 'Xoá ca',
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _delete(s),
-            ),
+            // Delete (= move to another day) only before the shift starts; running,
+            // ended or canceled shifts keep their worked hours, so they can only be canceled.
+            if (s.isActive && s.startTime.isAfter(DateTime.now()))
+              IconButton(
+                tooltip: 'Xoá ca',
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _delete(s),
+              ),
           ],
         ),
       ),

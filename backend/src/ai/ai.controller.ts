@@ -42,15 +42,16 @@ export class AiController {
         return this.aiService.chat(dto.symptoms);
     }
 
-    /** Tổng hợp ảnh + triệu chứng -> file PDF chẩn đoán sơ bộ gửi bác sĩ. */
+    /** Triệu chứng (bắt buộc) + ảnh (tuỳ chọn) -> file PDF chẩn đoán sơ bộ gửi bác sĩ. */
     @Roles("patient")
     @Post("report")
     @ApiConsumes("multipart/form-data")
     @ApiBody({
         schema: {
             type: "object",
+            required: ["symptoms"],
             properties: {
-                image: { type: "string", format: "binary" },
+                image: { type: "string", format: "binary", description: "Tuỳ chọn" },
                 symptoms: { type: "string" },
                 appointmentId: { type: "integer" },
             },

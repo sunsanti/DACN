@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { DoctorEntity } from "./entities/doctor.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Between, In, IsNull, Repository } from "typeorm";
+import { And, Between, In, IsNull, LessThan, MoreThanOrEqual, Repository } from "typeorm";
 import { ShiftEntity } from "./entities/shift.entity";
 import { AppointmentEntity } from "../patient/entities/appointment.entity";
 import { PatientEntity } from "../patient/entities/patient.entity";
@@ -127,10 +127,14 @@ export class DoctorService {
         });
     }
 
-    /** All registered shifts (overview): who works which window. */
+    /** Registered shifts of the current week (Mon 00:00 → next Mon, server TZ): who works which window. */
     shiftOverview(): Promise<ShiftAssignmentEntity[]> {
+        const now = new Date();
+        const monday = now.getDate() - ((now.getDay() + 6) % 7); // getDay(): 0 = Sunday
+        const weekStart = new Date(now.getFullYear(), now.getMonth(), monday);
+        const weekEnd = new Date(now.getFullYear(), now.getMonth(), monday + 7);
         return this.shiftAssignmentRepo.find({
-            where: { status: "ACTIVE" },
+            where: { status: "ACTIVE", startTime: And(MoreThanOrEqual(weekStart), LessThan(weekEnd)) },
             relations: ["doctor"],
             order: { startTime: "ASC" },
         });
@@ -223,13 +227,27 @@ export class DoctorService {
         return updated;
     }
 
+    /**
+     * Delete = move the shift to another day, so only a shift that has not started yet.
+     * Running or ended shifts and canceled ones hold worked hours (salary) → keep them.
+     */
     async deleteAssignment(doctorId: number, assignmentId: number): Promise<void> {
-        await this.assertOwnsAssignment(doctorId, assignmentId);
+        const a = await this.assertOwnsAssignment(doctorId, assignmentId);
+        if (a.status !== "ACTIVE") throw new BadRequestException("Ca đã huỷ không thể xoá");
+        const now = Date.now();
+        if (new Date(a.startTime).getTime() <= now) {
+            throw new BadRequestException(
+                new Date(a.endTime).getTime() > now
+                    ? "Ca đang diễn ra, chỉ có thể huỷ ca"
+                    : "Ca đã kết thúc không thể xoá",
+            );
+        }
         await this.shiftAssignmentRepo.delete(assignmentId);
     }
 
     /** Latest AI report PDF for an appointment (for the doctor to download). */
-    async getReport(appointmentId: number): Promise<Buffer | null> {
+    async getReport(doctorId: number, appointmentId: number): Promise<Buffer | null> {
+        await this.assertOwns(doctorId, appointmentId);
         const report = await this.reportRepo.findOne({
             where: { appointment: { id: appointmentId } },
             order: { createdAt: "DESC" },
